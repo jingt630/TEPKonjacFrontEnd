@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Backend Connection Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #fff;
+        }
+        .test-section {
+            background: #2a2a2a;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+        button {
+            background: #646cff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+        }
+        button:hover {
+            background: #535bf2;
+        }
+        .result {
+            background: #000;
+            padding: 15px;
+            margin-top: 15px;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 14px;
+        }
+        .success {
+            color: #4ade80;
+        }
+        .error {
+            color: #ff6b6b;
+        }
+        h2 {
+            color: #646cff;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔌 Backend Connection Test</h1>
+    <p>Test your backend connection before using the main app</p>
+
+    <div class="test-section">
+        <h2>1. Test List Folders</h2>
+        <p>This should list all folders (might be empty array if no folders exist)</p>
+        <button onclick="testListFolders()">📂 Test List Folders</button>
+        <div id="result-list" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>2. Test Create Folder</h2>
+        <p>This will create a folder named "Test Folder [timestamp]"</p>
+        <button onclick="testCreateFolder()">➕ Test Create Folder</button>
+        <div id="result-create" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>3. Test List Media Files</h2>
+        <p>This should list all media files (might be empty array)</p>
+        <button onclick="testListMedia()">📄 Test List Media</button>
+        <div id="result-media" class="result"></div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:8000/api';
+
+        function displayResult(elementId, data, isError = false) {
+            const element = document.getElementById(elementId);
+            element.className = isError ? 'result error' : 'result success';
+            element.textContent = JSON.stringify(data, null, 2);
+        }
+
+        async function testListFolders() {
+            const resultDiv = document.getElementById('result-list');
+            resultDiv.textContent = '⏳ Testing...';
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/MediaManagement/_listFolders`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        filePath: '/'
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    displayResult('result-list', {
+                        status: '✅ SUCCESS',
+                        endpoint: '/api/MediaManagement/_listFolders',
+                        foldersCount: data.length,
+                        data: data
+                    });
+                } else {
+                    displayResult('result-list', {
+                        status: '❌ ERROR',
+                        statusCode: response.status,
+                        data: data
+                    }, true);
+                }
+            } catch (error) {
+                displayResult('result-list', {
+                    status: '❌ FAILED',
+                    error: error.message,
+                    possibleCauses: [
+                        'Backend is not running',
+                        'Wrong port (check if backend is on 8000)',
+                        'CORS not configured'
+                    ]
+                }, true);
+            }
+        }
+
+        async function testCreateFolder() {
+            const resultDiv = document.getElementById('result-create');
+            resultDiv.textContent = '⏳ Creating folder...';
+
+            const folderName = `Test Folder ${Date.now()}`;
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/MediaManagement/createFolder`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        filePath: '/',
+                        name: folderName
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    displayResult('result-create', {
+                        status: '✅ SUCCESS',
+                        endpoint: '/api/MediaManagement/createFolder',
+                        message: 'Folder created successfully!',
+                        data: data
+                    });
+                } else {
+                    displayResult('result-create', {
+                        status: '❌ ERROR',
+                        statusCode: response.status,
+                        data: data
+                    }, true);
+                }
+            } catch (error) {
+                displayResult('result-create', {
+                    status: '❌ FAILED',
+                    error: error.message,
+                    possibleCauses: [
+                        'Backend is not running',
+                        'Wrong port (check if backend is on 8000)',
+                        'CORS not configured'
+                    ]
+                }, true);
+            }
+        }
+
+        async function testListMedia() {
+            const resultDiv = document.getElementById('result-media');
+            resultDiv.textContent = '⏳ Testing...';
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/MediaManagement/_listMediaFiles`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        filePath: '/'
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    displayResult('result-media', {
+                        status: '✅ SUCCESS',
+                        endpoint: '/api/MediaManagement/_listMediaFiles',
+                        filesCount: data.length,
+                        data: data
+                    });
+                } else {
+                    displayResult('result-media', {
+                        status: '❌ ERROR',
+                        statusCode: response.status,
+                        data: data
+                    }, true);
+                }
+            } catch (error) {
+                displayResult('result-media', {
+                    status: '❌ FAILED',
+                    error: error.message,
+                    possibleCauses: [
+                        'Backend is not running',
+                        'Wrong port (check if backend is on 8000)',
+                        'CORS not configured'
+                    ]
+                }, true);
+            }
+        }
+
+        // Auto-run test on load
+        window.onload = function() {
+            console.log('Backend Connection Tester Loaded');
+            console.log('Backend URL:', API_BASE_URL);
+            console.log('Click buttons to test each endpoint');
+        };
+    </script>
+</body>
+</html>
