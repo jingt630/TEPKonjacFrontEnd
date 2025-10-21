@@ -13,7 +13,7 @@ export const API_ENDPOINTS = {
   ADD_TRANSLATED_TEXT: '/MediaManagement/addTranslatedText',
   CREATE_FOLDER: '/MediaManagement/createFolder',
   LIST_FOLDERS: '/MediaManagement/_listFolders',
-  
+
   // ========== TextExtraction Concept ==========
   EXTRACT_TEXT: '/TextExtraction/extractTextFromMedia',
   EDIT_EXTRACTED_TEXT: '/TextExtraction/editExtractText',
@@ -22,20 +22,20 @@ export const API_ENDPOINTS = {
   DELETE_EXTRACTION: '/TextExtraction/deleteExtraction',
   GET_EXTRACTIONS_FOR_IMAGE: '/TextExtraction/_getExtractionResultsForImage',
   GET_EXTRACTION_LOCATION: '/TextExtraction/_getLocationForExtraction',
-  
+
   // ========== Translation Concept ==========
   CREATE_TRANSLATION: '/Translation/createTranslation',
   EDIT_TRANSLATION: '/Translation/editTranslation',
   CHANGE_LANGUAGE: '/Translation/changeLanguage',
   GET_TRANSLATION_BY_ID: '/Translation/_getTranslationById',
   GET_TRANSLATIONS_BY_ORIGINAL: '/Translation/_getTranslationsByOriginalTextId',
-  
+
   // ========== Rendering Concept ==========
   RENDER_OUTPUT: '/Rendering/render',
   EXPORT_OUTPUT: '/Rendering/export',
   GET_OUTPUT_BY_ID: '/Rendering/_getOutputVersionById',
   GET_ALL_OUTPUTS: '/Rendering/_getAllOutputVersions',
-  
+
   // ========== User Concept ==========
   CREATE_USER: '/User/create',
   DELETE_USER: '/User/delete',

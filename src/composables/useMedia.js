@@ -8,7 +8,7 @@ import { mediaApi } from '../services/mediaApi';
 export function useMedia() {
   const mediaFiles = ref([]);
   const folders = ref([]);
-  const currentPath = ref('');
+  const currentPath = ref('/');  // Changed from '' to '/'
   const loading = ref(false);
   const error = ref(null);
 
@@ -20,16 +20,23 @@ export function useMedia() {
     error.value = null;
 
     try {
+      console.log('📂 Loading media from path:', currentPath.value);
+
       const [files, dirs] = await Promise.all([
         mediaApi.listMediaFiles(currentPath.value),
         mediaApi.listFolders(currentPath.value)
       ]);
 
+      console.log('📁 Folders received:', dirs);
+      console.log('📄 Files received:', files);
+
       mediaFiles.value = files;
       folders.value = dirs;
+
+      console.log('✅ Media loaded. Folders count:', folders.value.length);
     } catch (err) {
       error.value = 'Failed to load media: ' + err.message;
-      console.error('Error loading media:', err);
+      console.error('❌ Error loading media:', err);
     } finally {
       loading.value = false;
     }
@@ -123,19 +130,29 @@ export function useMedia() {
     error.value = null;
 
     try {
+      const targetPath = filePath || currentPath.value || '/';
+      console.log('🆕 Creating folder:', name, 'at path:', targetPath);
+
       const result = await mediaApi.createFolder({
-        filePath: filePath || currentPath.value,
+        filePath: targetPath,
         name
       });
 
+      console.log('📨 Backend response:', result);
+
       if (result.error) {
+        console.error('❌ Error from backend:', result.error);
         error.value = result.error;
         return { success: false, error: result.error };
       }
 
+      console.log('✅ Folder created! Refreshing list...');
       await loadMedia();
+      console.log('🔄 List refreshed!');
+
       return { success: true, data: result };
     } catch (err) {
+      console.error('❌ Exception during folder creation:', err);
       error.value = err.message;
       return { success: false, error: err.message };
     } finally {

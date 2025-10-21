@@ -1,6 +1,7 @@
 <script setup>
 import { ref, defineProps, defineEmits } from 'vue'
 import MediaCard from './MediaCard.vue'
+import FileUpload from './FileUpload.vue'
 
 const props = defineProps({
   mediaFiles: {
@@ -9,9 +10,10 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['fileSelect', 'fileDelete', 'fileMove'])
+const emit = defineEmits(['fileSelect', 'fileDelete', 'fileMove', 'fileUploaded'])
 
 const selectedFileId = ref(null)
+const showUpload = ref(false)
 
 const handleFileSelect = (file) => {
   selectedFileId.value = file._id
@@ -32,14 +34,34 @@ const handleFileMove = (moveData) => {
   // Pass move request UP to parent
   emit('fileMove', moveData)
 }
+
+const handleFileUploaded = (fileData) => {
+  showUpload.value = false
+  emit('fileUploaded', fileData)
+}
+
+const toggleUpload = () => {
+  showUpload.value = !showUpload.value
+}
 </script>
 
 <template>
   <div class="media-gallery">
-    <h2>Media Files ({{ mediaFiles.length }})</h2>
+    <div class="gallery-header">
+      <h2>Media Files ({{ mediaFiles.length }})</h2>
+      <button @click="toggleUpload" class="btn-upload-toggle">
+        {{ showUpload ? '❌ Close' : '📤 Upload' }}
+      </button>
+    </div>
 
-    <div v-if="mediaFiles.length === 0" class="empty">
-      No media files found. Upload a file to get started.
+    <FileUpload
+      v-if="showUpload"
+      @file-uploaded="handleFileUploaded"
+      class="upload-section"
+    />
+
+    <div v-if="mediaFiles.length === 0 && !showUpload" class="empty">
+      No media files found. Click "Upload" to add images.
     </div>
 
     <div v-else class="gallery-grid">
@@ -61,8 +83,30 @@ const handleFileMove = (moveData) => {
   padding: 1rem;
 }
 
-h2 {
+.gallery-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 1.5rem;
+}
+
+h2 {
+  margin: 0;
+}
+
+.btn-upload-toggle {
+  background: #4ade80;
+}
+
+.btn-upload-toggle:hover {
+  background: #3bc76a;
+}
+
+.upload-section {
+  margin-bottom: 2rem;
+  padding: 1rem;
+  background: rgba(100, 108, 255, 0.05);
+  border-radius: 12px;
 }
 
 .gallery-grid {

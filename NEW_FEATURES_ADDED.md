@@ -177,7 +177,7 @@ const selectedImage = ref({
 </script>
 
 <template>
-  <TextExtractionPanel 
+  <TextExtractionPanel
     :selected-image="selectedImage"
     @extraction-created="handleExtractionCreated"
     @extraction-deleted="handleExtractionDeleted"
@@ -257,4 +257,3 @@ And I'll help you fix it! 🚀
 ---
 
 All your backend concepts now have full frontend support! 🎉
-

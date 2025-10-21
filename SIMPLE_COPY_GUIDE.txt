@@ -1,0 +1,87 @@
+🚨 YOUR BACKEND IS USING OLD CODE! 🚨
+
+══════════════════════════════════════════════════════════════
+
+📋 FOLLOW THESE STEPS EXACTLY:
+
+══════════════════════════════════════════════════════════════
+
+STEP 1: Open File Explorer
+───────────────────────────
+Press Windows Key + E
+
+
+STEP 2: Go to Frontend Folder
+──────────────────────────────
+Copy this path and paste in address bar:
+C:\Users\jingy\Downloads\TEPKonjacFrontEnd\concepts\MediaManagement
+
+
+STEP 3: Select Both Files
+──────────────────────────
+Click on: MediaManagement.ts
+Hold Ctrl and click on: MediaManagement.test.ts
+(Both should be highlighted)
+
+
+STEP 4: Copy Files
+───────────────────
+Press: Ctrl + C
+(or right-click → Copy)
+
+
+STEP 5: Go to Backend Folder
+─────────────────────────────
+Copy this path and paste in address bar:
+C:\Users\jingy\Downloads\concept_backend\src\concepts\MediaManagement
+
+
+STEP 6: Paste Files
+────────────────────
+Press: Ctrl + V
+(or right-click → Paste)
+
+When it says "Replace files?", click YES/REPLACE
+
+
+STEP 7: Open Backend Terminal
+──────────────────────────────
+Find the terminal where your backend is running
+
+
+STEP 8: Stop Backend
+─────────────────────
+Press: Ctrl + C
+
+
+STEP 9: Start Backend Again
+────────────────────────────
+Type this command:
+deno run --allow-net --allow-read --allow-sys --allow-env concept_server_with_cors.ts --port 8000 --baseUrl /api
+
+Press Enter
+
+Wait for: "Server listening on http://localhost:8000"
+
+
+STEP 10: Refresh Browser
+─────────────────────────
+Go to your browser (http://localhost:5173)
+Press: F5
+
+
+STEP 11: Test
+──────────────
+Try logging in
+Try creating a folder
+IT SHOULD WORK! ✅
+
+══════════════════════════════════════════════════════════════
+
+❓ STILL NOT WORKING?
+
+Check your backend terminal for errors.
+Make sure you copied BOTH files.
+Make sure you restarted the backend.
+
+══════════════════════════════════════════════════════════════

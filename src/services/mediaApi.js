@@ -1,10 +1,18 @@
 import { API_BASE_URL, API_ENDPOINTS } from '../config/api';
+import { useUserStore } from '../stores/userStore';
 
 /**
  * Media Management API Service
  * Handles all API calls to the backend
  */
 class MediaApiService {
+  /**
+   * Get current user ID from store
+   */
+  getUserId() {
+    const userStore = useUserStore();
+    return userStore.userId || 'anonymous';
+  }
   /**
    * Upload a new media file
    * @param {Object} params - Upload parameters
@@ -22,6 +30,7 @@ class MediaApiService {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          userId: this.getUserId(),
           filePath,
           mediaType,
           filename,
@@ -48,7 +57,10 @@ class MediaApiService {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ mediaId }),
+        body: JSON.stringify({
+          userId: this.getUserId(),
+          mediaId
+        }),
       });
 
       const data = await response.json();
@@ -71,7 +83,11 @@ class MediaApiService {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ mediaId, newFilePath }),
+        body: JSON.stringify({
+          userId: this.getUserId(),
+          mediaId,
+          newFilePath
+        }),
       });
 
       const data = await response.json();
@@ -93,7 +109,10 @@ class MediaApiService {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ mediaId }),
+        body: JSON.stringify({
+          userId: this.getUserId(),
+          mediaId
+        }),
       });
 
       const data = await response.json();
@@ -116,7 +135,10 @@ class MediaApiService {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ filePath }),
+        body: JSON.stringify({
+          userId: this.getUserId(),
+          filePath
+        }),
       });
 
       const data = await response.json();
@@ -140,7 +162,11 @@ class MediaApiService {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ mediaId, extractionResult }),
+        body: JSON.stringify({
+          userId: this.getUserId(),
+          mediaId,
+          extractionResult
+        }),
       });
 
       const data = await response.json();
@@ -163,7 +189,11 @@ class MediaApiService {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ mediaId, translatedText }),
+        body: JSON.stringify({
+          userId: this.getUserId(),
+          mediaId,
+          translatedText
+        }),
       });
 
       const data = await response.json();
@@ -182,12 +212,19 @@ class MediaApiService {
    */
   async createFolder({ filePath, name }) {
     try {
+      const userId = this.getUserId();
+      console.log('📤 Sending createFolder with userId:', userId);
+
       const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.CREATE_FOLDER}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ filePath, name }),
+        body: JSON.stringify({
+          userId,
+          filePath,
+          name
+        }),
       });
 
       const data = await response.json();
@@ -204,12 +241,18 @@ class MediaApiService {
    */
   async listFolders(filePath = '') {
     try {
+      const userId = this.getUserId();
+      console.log('📤 Sending listFolders with userId:', userId);
+
       const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.LIST_FOLDERS}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ filePath }),
+        body: JSON.stringify({
+          userId,
+          filePath
+        }),
       });
 
       const data = await response.json();
