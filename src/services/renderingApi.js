@@ -7,19 +7,20 @@ import { API_BASE_URL, API_ENDPOINTS } from '../config/api';
 class RenderingApiService {
   /**
    * Render text content onto an image
-   * @param {string} imagePath - Path to the base image
+   * @param {string} userId - User ID
+   * @param {string} imagePath - Path to the base image (mediaId)
    * @param {Object} contentToRender - Content with text elements to render
    * @param {Array} contentToRender.textElements - Array of text elements
    * @returns {Promise<{output: Object} | {error: string}>}
    */
-  async render(imagePath, contentToRender) {
+  async render(userId, imagePath, contentToRender) {
     try {
       const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.RENDER_OUTPUT}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ imagePath, contentToRender }),
+        body: JSON.stringify({ userId, imagePath, contentToRender }),
       });
 
       const data = await response.json();
@@ -77,23 +78,48 @@ class RenderingApiService {
   }
 
   /**
-   * Get all output versions
+   * Get all output versions for a user
+   * @param {string} userId - User ID
    * @returns {Promise<Array>}
    */
-  async getAllOutputs() {
+  async getAllOutputs(userId) {
     try {
       const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.GET_ALL_OUTPUTS}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({}),
+        body: JSON.stringify({ userId }),
       });
 
       const data = await response.json();
       return data;
     } catch (error) {
       console.error('Error getting outputs:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get outputs for a specific media file
+   * @param {string} userId - User ID
+   * @param {string} mediaId - Media file ID
+   * @returns {Promise<Array>}
+   */
+  async getOutputsByMedia(userId, mediaId) {
+    try {
+      const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.GET_OUTPUTS_BY_MEDIA}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ userId, mediaId }),
+      });
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error getting outputs by media:', error);
       return [];
     }
   }

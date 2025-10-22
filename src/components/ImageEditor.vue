@@ -21,6 +21,9 @@ const extractions = ref([])
 const selectedExtraction = ref(null)
 const showAddExtraction = ref(false)
 
+// Coordinate editing state
+const editingCoordinates = ref({}) // Track which extraction is being edited
+
 // New extraction form
 const newExtraction = ref({
   text: '',
@@ -114,12 +117,22 @@ const loadLocationForExtraction = async (extraction) => {
     })
 
     if (response.ok) {
-      const locationData = await response.json()
-      // Store location data directly on the extraction object
-      extraction.locationData = locationData
-      console.log('📍 Loaded location for extraction:', extraction._id, locationData)
+      const data = await response.json()
+      console.log('📦 Raw location response for', extraction._id, ':', data)
+
+      // Backend returns an array, take the first element
+      if (Array.isArray(data) && data.length > 0) {
+        extraction.locationData = data[0]
+        console.log('📍 Location loaded:', extraction.locationData)
+      } else if (!Array.isArray(data)) {
+        // If it's not an array, use it directly (backward compatibility)
+        extraction.locationData = data
+        console.log('📍 Location loaded (direct):', extraction.locationData)
+      } else {
+        console.warn('⚠️ No location data in response for extraction:', extraction._id)
+      }
     } else {
-      console.warn('⚠️ No location data for extraction:', extraction._id)
+      console.warn('⚠️ Failed to load location for extraction:', extraction._id)
     }
   } catch (error) {
     console.error('Error loading location:', error)
@@ -251,7 +264,7 @@ const addExtraction = async () => {
     console.log('   - MediaId:', props.mediaFile._id)
     console.log('   - Text:', newExtraction.value.text)
     console.log('   - Location:', newExtraction.value.x, newExtraction.value.y, newExtraction.value.width, newExtraction.value.height)
-    
+
     const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.ADD_MANUAL_EXTRACTION}`, {
       method: 'POST',
       headers: {
@@ -364,8 +377,8 @@ const editExtraction = async (extraction) => {
   }
 }
 
-// Edit location coordinates
-const editLocation = async (extraction) => {
+// Enable coordinate editing mode
+const startEditingCoordinates = (extraction) => {
   if (!extraction.locationData) {
     alert('No location data available')
     return
@@ -374,21 +387,28 @@ const editLocation = async (extraction) => {
   const currentFrom = extraction.locationData.fromCoord || [0, 0]
   const currentTo = extraction.locationData.toCoord || [100, 100]
 
-  // Prompt for new coordinates
-  const fromX = prompt(`From X (current: ${currentFrom[0]}):`, currentFrom[0])
-  if (fromX === null) return
+  editingCoordinates.value[extraction._id] = {
+    fromX: currentFrom[0],
+    fromY: currentFrom[1],
+    toX: currentTo[0],
+    toY: currentTo[1]
+  }
+}
 
-  const fromY = prompt(`From Y (current: ${currentFrom[1]}):`, currentFrom[1])
-  if (fromY === null) return
+// Cancel coordinate editing
+const cancelEditingCoordinates = (extractionId) => {
+  delete editingCoordinates.value[extractionId]
+}
 
-  const toX = prompt(`To X (current: ${currentTo[0]}):`, currentTo[0])
-  if (toX === null) return
-
-  const toY = prompt(`To Y (current: ${currentTo[1]}):`, currentTo[1])
-  if (toY === null) return
+// Save edited coordinates
+const saveCoordinates = async (extraction) => {
+  const coords = editingCoordinates.value[extraction._id]
+  if (!coords) return
 
   loading.value = true
   try {
+    console.log('💾 Saving coordinates:', coords)
+
     const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.EDIT_EXTRACTION_LOCATION}`, {
       method: 'POST',
       headers: {
@@ -397,23 +417,31 @@ const editLocation = async (extraction) => {
       body: JSON.stringify({
         userId: userStore.userId,
         extractionResultId: extraction._id,
-        newFromCoord: [parseInt(fromX), parseInt(fromY)],
-        newToCoord: [parseInt(toX), parseInt(toY)]
+        newFromCoord: [parseInt(coords.fromX), parseInt(coords.fromY)],
+        newToCoord: [parseInt(coords.toX), parseInt(coords.toY)]
       }),
     })
 
     if (response.ok) {
-      alert('✅ Location updated!')
+      console.log('✅ Coordinates saved successfully')
+      delete editingCoordinates.value[extraction._id]
       await loadExtractions()
+      alert('✅ Coordinates updated!')
     } else {
-      alert('❌ Failed to update location')
+      const error = await response.json()
+      alert('❌ Failed to update coordinates: ' + (error.error || 'Unknown error'))
     }
   } catch (error) {
-    console.error('Error updating location:', error)
+    console.error('Error updating coordinates:', error)
     alert('❌ Error: ' + error.message)
   } finally {
     loading.value = false
   }
+}
+
+// Check if extraction is being edited
+const isEditingCoordinates = (extractionId) => {
+  return !!editingCoordinates.value[extractionId]
 }
 
 // Delete extraction
@@ -449,7 +477,7 @@ const deleteExtraction = async (extraction) => {
 // Delete translation
 const deleteTranslation = async (extraction, languageCode) => {
   const languageName = availableLanguages.find(l => l.code === languageCode)?.name || languageCode
-  if (!confirm(`Delete ${languageName} translation?`)) return
+  if (!confirm(`Delete ${languageName} translation?\n\nThis will permanently delete it from the database.`)) return
 
   if (!extraction.translationIds || !extraction.translationIds[languageCode]) {
     alert('❌ Translation ID not found')
@@ -458,7 +486,14 @@ const deleteTranslation = async (extraction, languageCode) => {
 
   loading.value = true
   try {
-    console.log(`🗑️ Deleting translation: ${languageCode} (ID: ${extraction.translationIds[languageCode]})`)
+    const translationId = extraction.translationIds[languageCode]
+
+    console.log(`🗑️ ========== DELETE TRANSLATION REQUEST ==========`)
+    console.log(`   - Language: ${languageName} (${languageCode})`)
+    console.log(`   - Translation ID: ${translationId}`)
+    console.log(`   - Original Text ID: ${extraction.textId}`)
+    console.log(`   - User ID: ${userStore.userId}`)
+    console.log(`   - Sending request to backend...`)
 
     const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.DELETE_TRANSLATION}`, {
       method: 'POST',
@@ -467,25 +502,38 @@ const deleteTranslation = async (extraction, languageCode) => {
       },
       body: JSON.stringify({
         userId: userStore.userId,
-        translationId: extraction.translationIds[languageCode]
+        translationId: translationId
       }),
     })
 
     if (response.ok) {
-      console.log('✅ Translation deleted successfully')
+      const result = await response.json()
+      console.log(`✅ ========== TRANSLATION DELETED FROM DATABASE ==========`)
+      console.log(`   - Translation ID: ${translationId}`)
+      console.log(`   - Language: ${languageName}`)
+      console.log(`   - Backend response:`, result)
+      console.log(`   - Status: Permanently removed from database`)
+      console.log(`========================================`)
 
       // Remove from local state immediately for quick UI update
       if (extraction.translations) {
         delete extraction.translations[languageCode]
+        console.log(`   - Removed from local UI state`)
       }
       if (extraction.translationIds) {
         delete extraction.translationIds[languageCode]
       }
 
+      // Show success message
+      alert(`✅ ${languageName} translation deleted from database!`)
+
       // Reload to ensure consistency
+      console.log(`🔄 Reloading extractions to verify deletion...`)
       await loadExtractions()
+      console.log(`✅ Reload complete - translation should be gone`)
     } else {
       const error = await response.json()
+      console.error(`❌ Failed to delete translation:`, error)
       alert('❌ Failed to delete translation: ' + (error.error || 'Unknown error'))
     }
   } catch (error) {
@@ -628,36 +676,144 @@ const handleClose = () => {
 
             <div
               v-else
-              v-for="extraction in extractions"
+              v-for="(extraction, index) in extractions"
               :key="extraction._id"
               class="extraction-item"
             >
+              <!-- Extraction Header with Number -->
+              <div class="extraction-header">
+                <span class="extraction-number">📝 Text Box #{{ index + 1 }}</span>
+                <span v-if="extraction.locationData && extraction.locationData.fromCoord" class="extraction-size">
+                  {{ Math.abs((extraction.locationData.toCoord[0] || 0) - (extraction.locationData.fromCoord[0] || 0)) }} ×
+                  {{ Math.abs((extraction.locationData.toCoord[1] || 0) - (extraction.locationData.fromCoord[1] || 0)) }} px
+                </span>
+              </div>
+
+              <!-- Extracted Text -->
               <div class="extraction-text">{{ extraction.extractedText }}</div>
 
-              <!-- Coordinates Display Box -->
+              <!-- Coordinates Display Box - ENHANCED WITH INLINE EDITING -->
               <div v-if="extraction.locationData && extraction.locationData.fromCoord" class="coordinates-box">
-                <div class="coordinates-header">📍 Location Coordinates:</div>
-                <div class="coordinates-display">
-                  <div class="coord-item">
-                    <span class="coord-label">Top-Left:</span>
-                    <span class="coord-value">
-                      ({{ extraction.locationData.fromCoord[0] || 0 }}, {{ extraction.locationData.fromCoord[1] || 0 }})
-                    </span>
+                <div class="coordinates-header">
+                  📍 Location on Image
+                </div>
+
+                <!-- EDIT MODE: Editable Input Fields -->
+                <div v-if="isEditingCoordinates(extraction._id)" class="coordinates-edit-mode">
+                  <div class="coord-row-edit">
+                    <!-- Top-Left Inputs -->
+                    <div class="coord-edit-group">
+                      <div class="coord-edit-header">
+                        <span class="coord-icon">↖️</span>
+                        <span class="coord-label-small">Top-Left</span>
+                      </div>
+                      <div class="coord-inputs">
+                        <label class="coord-input-label">
+                          <span>X:</span>
+                          <input
+                            type="number"
+                            v-model.number="editingCoordinates[extraction._id].fromX"
+                            class="coord-input"
+                          />
+                        </label>
+                        <label class="coord-input-label">
+                          <span>Y:</span>
+                          <input
+                            type="number"
+                            v-model.number="editingCoordinates[extraction._id].fromY"
+                            class="coord-input"
+                          />
+                        </label>
+                      </div>
+                    </div>
+
+                    <!-- Bottom-Right Inputs -->
+                    <div class="coord-edit-group">
+                      <div class="coord-edit-header">
+                        <span class="coord-icon">↘️</span>
+                        <span class="coord-label-small">Bottom-Right</span>
+                      </div>
+                      <div class="coord-inputs">
+                        <label class="coord-input-label">
+                          <span>X:</span>
+                          <input
+                            type="number"
+                            v-model.number="editingCoordinates[extraction._id].toX"
+                            class="coord-input"
+                          />
+                        </label>
+                        <label class="coord-input-label">
+                          <span>Y:</span>
+                          <input
+                            type="number"
+                            v-model.number="editingCoordinates[extraction._id].toY"
+                            class="coord-input"
+                          />
+                        </label>
+                      </div>
+                    </div>
                   </div>
-                  <div class="coord-item">
-                    <span class="coord-label">Bottom-Right:</span>
-                    <span class="coord-value">
-                      ({{ extraction.locationData.toCoord[0] || 0 }}, {{ extraction.locationData.toCoord[1] || 0 }})
-                    </span>
+
+                  <!-- Save/Cancel Buttons -->
+                  <div class="coord-edit-actions">
+                    <button
+                      @click="saveCoordinates(extraction)"
+                      class="btn-save-coords"
+                      :disabled="loading"
+                    >
+                      ✅ Save Changes
+                    </button>
+                    <button
+                      @click="cancelEditingCoordinates(extraction._id)"
+                      class="btn-cancel-coords"
+                      :disabled="loading"
+                    >
+                      ❌ Cancel
+                    </button>
                   </div>
                 </div>
-                <button
-                  @click="editLocation(extraction)"
-                  class="btn-edit-coordinates"
-                  :disabled="loading"
-                >
-                  ✏️ Edit Coordinates
-                </button>
+
+                <!-- VIEW MODE: Display Coordinates -->
+                <div v-else class="coordinates-grid">
+                  <div class="coord-row">
+                    <div class="coord-item-enhanced">
+                      <span class="coord-icon">↖️</span>
+                      <div class="coord-details">
+                        <span class="coord-label-small">Top-Left</span>
+                        <span class="coord-value-large">
+                          X: {{ extraction.locationData.fromCoord[0] || 0 }},
+                          Y: {{ extraction.locationData.fromCoord[1] || 0 }}
+                        </span>
+                      </div>
+                    </div>
+                    <div class="coord-item-enhanced">
+                      <span class="coord-icon">↘️</span>
+                      <div class="coord-details">
+                        <span class="coord-label-small">Bottom-Right</span>
+                        <span class="coord-value-large">
+                          X: {{ extraction.locationData.toCoord[0] || 0 }},
+                          Y: {{ extraction.locationData.toCoord[1] || 0 }}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="coord-dimensions">
+                    <span class="dimension-label">📏 Size:</span>
+                    <span class="dimension-value">
+                      {{ Math.abs((extraction.locationData.toCoord[0] || 0) - (extraction.locationData.fromCoord[0] || 0)) }}px wide ×
+                      {{ Math.abs((extraction.locationData.toCoord[1] || 0) - (extraction.locationData.fromCoord[1] || 0)) }}px tall
+                    </span>
+                  </div>
+
+                  <!-- Edit Button -->
+                  <button
+                    @click="startEditingCoordinates(extraction)"
+                    class="btn-edit-coordinates"
+                    :disabled="loading"
+                  >
+                    ✏️ Edit Coordinates
+                  </button>
+                </div>
               </div>
 
               <div class="extraction-meta">
@@ -1015,53 +1171,142 @@ const handleClose = () => {
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
+/* Extraction Header */
+.extraction-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0.75rem;
+  background: linear-gradient(135deg, rgba(100, 108, 255, 0.2), rgba(74, 222, 128, 0.2));
+  border-radius: 6px;
+  margin-bottom: 0.75rem;
+  border: 1px solid rgba(100, 108, 255, 0.3);
+}
+
+.extraction-number {
+  color: #646cff;
+  font-weight: 700;
+  font-size: 1em;
+  text-shadow: 0 0 10px rgba(100, 108, 255, 0.5);
+}
+
+.extraction-size {
+  color: #4ade80;
+  font-weight: 600;
+  font-size: 0.85em;
+  font-family: 'Courier New', monospace;
+  background: rgba(74, 222, 128, 0.2);
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+}
+
 .extraction-text {
   color: white;
   margin-bottom: 0.75rem;
-  font-size: 1em;
+  font-size: 1.1em;
   line-height: 1.5;
+  padding: 0.5rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+  font-weight: 500;
 }
 
-/* Coordinates Display Box */
+/* Enhanced Coordinates Display Box */
 .coordinates-box {
-  background: rgba(74, 222, 128, 0.1);
-  border-left: 3px solid #4ade80;
-  border-radius: 6px;
-  padding: 0.75rem;
+  background: linear-gradient(135deg, rgba(74, 222, 128, 0.15), rgba(74, 222, 128, 0.05));
+  border: 2px solid #4ade80;
+  border-radius: 8px;
+  padding: 1rem;
   margin-bottom: 0.75rem;
+  box-shadow: 0 0 20px rgba(74, 222, 128, 0.2);
 }
 
 .coordinates-header {
   color: #4ade80;
-  font-weight: 600;
-  font-size: 0.85em;
-  margin-bottom: 0.5rem;
+  font-weight: 700;
+  font-size: 1em;
+  margin-bottom: 0.75rem;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  text-shadow: 0 0 10px rgba(74, 222, 128, 0.5);
 }
 
-.coordinates-display {
+.coordinates-grid {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.75rem;
   margin-bottom: 0.75rem;
 }
 
-.coord-item {
+.coord-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.coord-item-enhanced {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 0.75rem;
+  border-radius: 6px;
+  border: 1px solid rgba(74, 222, 128, 0.3);
+  transition: all 0.2s;
+}
+
+.coord-item-enhanced:hover {
+  background: rgba(0, 0, 0, 0.4);
+  border-color: #4ade80;
+  transform: translateY(-2px);
+}
+
+.coord-icon {
+  font-size: 1.8em;
+  filter: drop-shadow(0 0 5px rgba(74, 222, 128, 0.5));
+}
+
+.coord-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex: 1;
+}
+
+.coord-label-small {
+  color: #4ade80;
+  font-weight: 600;
+  font-size: 0.75em;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.coord-value-large {
+  color: white;
+  font-family: 'Courier New', monospace;
+  font-size: 1em;
+  font-weight: 700;
+  text-shadow: 0 0 5px rgba(255, 255, 255, 0.3);
+}
+
+.coord-dimensions {
+  background: rgba(74, 222, 128, 0.2);
+  padding: 0.75rem;
+  border-radius: 6px;
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  background: rgba(255, 255, 255, 0.05);
-  padding: 0.5rem;
-  border-radius: 4px;
+  border: 1px solid rgba(74, 222, 128, 0.4);
 }
 
-.coord-label {
+.dimension-label {
   color: #4ade80;
-  font-weight: 600;
-  font-size: 0.85em;
-  min-width: 100px;
+  font-weight: 700;
+  font-size: 0.9em;
 }
 
-.coord-value {
+.dimension-value {
   color: white;
   font-family: 'Courier New', monospace;
   font-size: 0.95em;
@@ -1088,6 +1333,135 @@ const handleClose = () => {
 .btn-edit-coordinates:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* Coordinate Edit Mode Styles */
+.coordinates-edit-mode {
+  padding: 0.5rem 0;
+}
+
+.coord-row-edit {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.coord-edit-group {
+  background: rgba(0, 0, 0, 0.3);
+  border: 2px solid rgba(74, 222, 128, 0.5);
+  border-radius: 8px;
+  padding: 0.75rem;
+}
+
+.coord-edit-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid rgba(74, 222, 128, 0.3);
+}
+
+.coord-inputs {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.coord-input-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: white;
+  font-weight: 600;
+}
+
+.coord-input-label span {
+  min-width: 20px;
+  color: #4ade80;
+  font-size: 0.9em;
+}
+
+.coord-input {
+  flex: 1;
+  padding: 0.5rem 0.75rem;
+  background: rgba(0, 0, 0, 0.5);
+  border: 2px solid rgba(74, 222, 128, 0.3);
+  border-radius: 6px;
+  color: white;
+  font-family: 'Courier New', monospace;
+  font-size: 1em;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.coord-input:focus {
+  outline: none;
+  border-color: #4ade80;
+  background: rgba(0, 0, 0, 0.7);
+  box-shadow: 0 0 10px rgba(74, 222, 128, 0.3);
+}
+
+.coord-input:hover {
+  border-color: rgba(74, 222, 128, 0.6);
+}
+
+/* Remove spinner arrows from number inputs */
+.coord-input::-webkit-outer-spin-button,
+.coord-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.coord-input[type=number] {
+  -moz-appearance: textfield;
+}
+
+.coord-edit-actions {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.btn-save-coords,
+.btn-cancel-coords {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.95em;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-save-coords {
+  background: #4ade80;
+  color: white;
+}
+
+.btn-save-coords:hover:not(:disabled) {
+  background: #3bc76a;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(74, 222, 128, 0.4);
+}
+
+.btn-cancel-coords {
+  background: rgba(255, 107, 107, 0.8);
+  color: white;
+}
+
+.btn-cancel-coords:hover:not(:disabled) {
+  background: #ff6b6b;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(255, 107, 107, 0.4);
+}
+
+.btn-save-coords:disabled,
+.btn-cancel-coords:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
 }
 
 .extraction-meta {

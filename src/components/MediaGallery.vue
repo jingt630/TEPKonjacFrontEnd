@@ -1,5 +1,5 @@
 <script setup>
-import { ref, defineProps, defineEmits } from 'vue'
+import { ref, defineProps, defineEmits, watch } from 'vue'
 import MediaCard from './MediaCard.vue'
 import FileUpload from './FileUpload.vue'
 
@@ -15,6 +15,15 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['fileSelect', 'fileDelete', 'fileMove', 'fileUploaded'])
+
+// Debug: Watch for media files changes
+watch(() => props.mediaFiles, (newFiles) => {
+  console.log(`📊 MediaGallery received ${newFiles.length} files for path:`, props.currentPath)
+  if (newFiles.length > 0) {
+    console.log('   Files:')
+    newFiles.forEach(f => console.log(`     - ${f.filename} (path: ${f.filePath})`))
+  }
+}, { immediate: true })
 
 const selectedFileId = ref(null)
 const showUpload = ref(false)

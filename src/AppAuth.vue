@@ -7,6 +7,7 @@ import FolderBrowser from './components/FolderBrowser.vue'
 import MediaGallery from './components/MediaGallery.vue'
 import MediaDetails from './components/MediaDetails.vue'
 import ImageEditor from './components/ImageEditor.vue'
+import RenderingPanel from './components/RenderingPanel.vue'
 
 // User store
 const userStore = useUserStore()
@@ -56,17 +57,17 @@ const selectedFile = ref(null)
 const handleFolderClick = (folder) => {
   console.log('📁 Folder clicked:', folder.name)
   console.log('   - Current filePath:', folder.filePath)
-  
+
   // Build new path, avoiding double slashes
   let newPath = folder.filePath
   if (!newPath.endsWith('/')) {
     newPath += '/'
   }
   newPath += folder.name
-  
+
   // Normalize path (remove double slashes)
   newPath = newPath.replace(/\/+/g, '/')
-  
+
   console.log('   - New path:', newPath)
   currentPath.value = newPath
   loadMedia()
@@ -133,6 +134,21 @@ const closeImageEditor = () => {
   imageToEdit.value = null
   // Reload media to get any updates
   loadMedia()
+}
+
+// Handle render image from MediaDetails component
+const showRenderingPanel = ref(false)
+const imageToRender = ref(null)
+
+const handleRenderImage = (mediaFile) => {
+  console.log('🎨 Opening rendering panel for:', mediaFile.filename)
+  imageToRender.value = mediaFile
+  showRenderingPanel.value = true
+}
+
+const closeRenderingPanel = () => {
+  showRenderingPanel.value = false
+  imageToRender.value = null
 }
 
 // Handle file upload from MediaGallery component
@@ -208,6 +224,7 @@ const handleLogout = () => {
           <MediaDetails
             :media-file="selectedFile"
             @edit-image="handleEditImage"
+            @render-image="handleRenderImage"
           />
         </aside>
       </div>
@@ -223,6 +240,17 @@ const handleLogout = () => {
         :media-file="imageToEdit"
         @close="closeImageEditor"
       />
+
+      <!-- Rendering Panel Modal -->
+      <div v-if="showRenderingPanel && imageToRender" class="modal-overlay" @click="closeRenderingPanel">
+        <div class="modal-content rendering-modal" @click.stop>
+          <div class="modal-header">
+            <h2>🎨 Render Text on Image</h2>
+            <button @click="closeRenderingPanel" class="btn-close-modal">✖ Close</button>
+          </div>
+          <RenderingPanel :media-file="imageToRender" />
+        </div>
+      </div>
     </template>
   </div>
 </template>
@@ -354,6 +382,62 @@ button:disabled {
   background-color: #ee5a52;
 }
 
+/* Modal Overlay for Rendering Panel */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+
+.modal-content.rendering-modal {
+  background: #1a1a1a;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 900px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem 2rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.modal-header h2 {
+  margin: 0;
+  color: #f59e0b;
+  font-size: 1.5em;
+}
+
+.btn-close-modal {
+  background: #ff6b6b;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 1em;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.btn-close-modal:hover {
+  background: #ee5a52;
+}
+
 /* Responsive Design */
 @media (max-width: 1200px) {
   .main-content {
@@ -369,6 +453,15 @@ button:disabled {
 
   .details-panel {
     order: 3;
+  }
+
+  .modal-overlay {
+    padding: 1rem;
+  }
+
+  .modal-content.rendering-modal {
+    max-width: 100%;
+    max-height: 95vh;
   }
 }
 </style>

@@ -37,6 +37,8 @@ export const API_ENDPOINTS = {
   EXPORT_OUTPUT: '/Rendering/export',
   GET_OUTPUT_BY_ID: '/Rendering/_getOutputVersionById',
   GET_ALL_OUTPUTS: '/Rendering/_getAllOutputVersions',
+  GET_OUTPUTS_BY_MEDIA: '/Rendering/_getOutputsByMediaId',
+  SERVE_RENDERED_IMAGE: '/Rendering/_serveRenderedImage',
 
   // ========== User Concept ==========
   CREATE_USER: '/User/create',

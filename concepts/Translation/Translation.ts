@@ -147,17 +147,51 @@ Translation:`;
     translationId: TransTextId;
   }): Promise<Empty | { error: string }> {
     try {
-      console.log(`🗑️ Deleting translation: ${translationId}`);
+      console.log(`🗑️ DELETE TRANSLATION REQUEST`);
+      console.log(`   - Translation ID: ${translationId}`);
+      console.log(`   - User ID: ${userId}`);
+
+      // First, verify the translation exists
+      const existingTranslation = await this.translations.findOne({
+        _id: translationId,
+      });
+
+      if (!existingTranslation) {
+        console.error(`❌ Translation not found in database: ${translationId}`);
+        return { error: `Translation with ID ${translationId} not found.` };
+      }
+
+      console.log(`   - Found translation:`, {
+        originalTextId: existingTranslation.originalTextId,
+        targetLanguage: existingTranslation.targetLanguage,
+        translatedText: existingTranslation.translatedText
+      });
+
+      // Delete from database
       const result = await this.translations.deleteOne({
         _id: translationId,
       });
 
       if (result.deletedCount === 0) {
-        console.error(`❌ Translation not found: ${translationId}`);
-        return { error: `Translation with ID ${translationId} not found.` };
+        console.error(`❌ Database deletion failed for: ${translationId}`);
+        return { error: `Failed to delete translation from database.` };
       }
 
-      console.log(`✅ Translation deleted successfully: ${translationId}`);
+      // Verify deletion
+      const verifyDeleted = await this.translations.findOne({
+        _id: translationId,
+      });
+
+      if (verifyDeleted) {
+        console.error(`❌ VERIFICATION FAILED: Translation still exists after deletion!`);
+        return { error: `Translation deletion verification failed.` };
+      }
+
+      console.log(`✅ TRANSLATION DELETED FROM DATABASE SUCCESSFULLY`);
+      console.log(`   - Translation ID: ${translationId}`);
+      console.log(`   - Deleted count: ${result.deletedCount}`);
+      console.log(`   - Verification: Confirmed removed from database`);
+
       return {};
     } catch (error) {
       console.error("❌ Error deleting translation:", error);

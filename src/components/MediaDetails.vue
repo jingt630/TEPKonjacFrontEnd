@@ -8,7 +8,7 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['editImage'])
+const emit = defineEmits(['editImage', 'renderImage'])
 
 // Check if the file is an image that can be edited
 const isImageFile = computed(() => {
@@ -21,6 +21,11 @@ const isImageFile = computed(() => {
 const handleEditImage = () => {
   emit('editImage', props.mediaFile)
 }
+
+// Handle clicking the "Render" button
+const handleRenderImage = () => {
+  emit('renderImage', props.mediaFile)
+}
 </script>
 
 <template>
@@ -32,13 +37,20 @@ const handleEditImage = () => {
     <div v-else class="details-content">
       <div class="header-section">
         <h2>{{ mediaFile.filename }}</h2>
-        <button
-          v-if="isImageFile"
-          @click="handleEditImage"
-          class="btn-edit-image"
-        >
-          ✏️ Edit Image
-        </button>
+        <div v-if="isImageFile" class="action-buttons">
+          <button
+            @click="handleEditImage"
+            class="btn-edit-image"
+          >
+            ✏️ Edit Image
+          </button>
+          <button
+            @click="handleRenderImage"
+            class="btn-render-image"
+          >
+            🎨 Render Text
+          </button>
+        </div>
       </div>
 
       <div class="detail-section">
@@ -107,7 +119,13 @@ const handleEditImage = () => {
   margin: 0;
 }
 
-.btn-edit-image {
+.action-buttons {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.btn-edit-image,
+.btn-render-image {
   background: #646cff;
   color: white;
   border: none;
@@ -120,13 +138,25 @@ const handleEditImage = () => {
   box-shadow: 0 2px 8px rgba(100, 108, 255, 0.3);
 }
 
-.btn-edit-image:hover {
+.btn-edit-image:hover,
+.btn-render-image:hover {
   background: #535bf2;
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(100, 108, 255, 0.5);
 }
 
-.btn-edit-image:active {
+.btn-render-image {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
+}
+
+.btn-render-image:hover {
+  background: linear-gradient(135deg, #d97706, #b45309);
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.5);
+}
+
+.btn-edit-image:active,
+.btn-render-image:active {
   transform: translateY(0);
 }
 
