@@ -1,11 +1,12 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useUserStore } from './stores/userStore'
 import { useMedia } from './composables/useMedia'
 import AuthView from './components/AuthView.vue'
 import FolderBrowser from './components/FolderBrowser.vue'
 import MediaGallery from './components/MediaGallery.vue'
 import MediaDetails from './components/MediaDetails.vue'
+import ImageEditor from './components/ImageEditor.vue'
 
 // User store
 const userStore = useUserStore()
@@ -16,6 +17,17 @@ onMounted(() => {
 
   // If logged in, load media
   if (userStore.isAuthenticated) {
+    loadMedia()
+  }
+})
+
+// Watch for userId changes and reload media
+// This ensures data is cleared when switching users
+watch(() => userStore.userId, (newUserId, oldUserId) => {
+  if (newUserId && newUserId !== oldUserId) {
+    console.log('🔄 User changed, reloading media for userId:', newUserId)
+    currentPath.value = '/'
+    selectedFile.value = null
     loadMedia()
   }
 })
@@ -44,6 +56,13 @@ const selectedFile = ref(null)
 const handleFolderClick = (folder) => {
   console.log('Folder clicked:', folder.name)
   currentPath.value = folder.filePath + '/' + folder.name
+  loadMedia()
+}
+
+// Handle navigation to specific path
+const handleNavigateTo = (path) => {
+  console.log('Navigating to:', path)
+  currentPath.value = path
   loadMedia()
 }
 
@@ -86,41 +105,31 @@ const handleFileMove = async ({ id, newPath }) => {
   }
 }
 
-// Handle context update from MediaDetails component
-const handleUpdateContext = async ({ mediaId, context }) => {
-  const result = await updateContext(mediaId, context)
+// Handle edit image from MediaDetails component
+const showImageEditor = ref(false)
+const imageToEdit = ref(null)
 
-  if (result.success) {
-    await loadMedia()
-    if (selectedFile.value?._id === mediaId) {
-      const updated = mediaFiles.value.find(f => f._id === mediaId)
-      if (updated) selectedFile.value = updated
-    }
-  } else {
-    alert('Error updating context: ' + result.error)
-  }
+const handleEditImage = (mediaFile) => {
+  console.log('📝 Opening image editor for:', mediaFile.filename)
+  imageToEdit.value = mediaFile
+  showImageEditor.value = true
 }
 
-// Handle translation update from MediaDetails component
-const handleUpdateTranslation = async ({ mediaId, translation }) => {
-  const result = await addTranslatedText(mediaId, translation)
-
-  if (result.success) {
-    await loadMedia()
-    if (selectedFile.value?._id === mediaId) {
-      const updated = mediaFiles.value.find(f => f._id === mediaId)
-      if (updated) selectedFile.value = updated
-    }
-  } else {
-    alert('Error updating translation: ' + result.error)
-  }
+const closeImageEditor = () => {
+  showImageEditor.value = false
+  imageToEdit.value = null
+  // Reload media to get any updates
+  loadMedia()
 }
 
 // Handle file upload from MediaGallery component
-const handleFileUpload = (fileData) => {
+const handleFileUpload = async (fileData) => {
   console.log('✅ File uploaded:', fileData)
   // The uploadFile in composable already calls loadMedia()
-  // So the gallery will refresh automatically
+  // But let's ensure it's refreshed in case of any timing issues
+  console.log('🔄 Parent component ensuring refresh...')
+  await loadMedia()
+  console.log('✅ Parent refresh complete. Files:', mediaFiles.value.length, 'Folders:', folders.value.length)
 }
 
 // Handle logout
@@ -142,7 +151,7 @@ const handleLogout = () => {
       <header class="app-header">
         <div class="header-left">
           <h1>🖼️ TEP Konjac</h1>
-          <span class="user-badge">👤 {{ userStore.username }}</span>
+          <span class="user-badge">👤 {{ userStore.username || userStore.email || 'User' }}</span>
         </div>
         <div class="header-info">
           <span class="current-path">📂 {{ currentPath || '/' }}</span>
@@ -165,6 +174,7 @@ const handleLogout = () => {
             :current-path="currentPath"
             @folder-click="handleFolderClick"
             @create-folder="handleCreateFolder"
+            @navigate-to="handleNavigateTo"
           />
         </aside>
 
@@ -172,6 +182,7 @@ const handleLogout = () => {
         <main class="gallery-section">
           <MediaGallery
             :media-files="mediaFiles"
+            :current-path="currentPath"
             @file-select="handleFileSelect"
             @file-delete="handleFileDelete"
             @file-move="handleFileMove"
@@ -183,8 +194,7 @@ const handleLogout = () => {
         <aside class="details-panel">
           <MediaDetails
             :media-file="selectedFile"
-            @update-context="handleUpdateContext"
-            @update-translation="handleUpdateTranslation"
+            @edit-image="handleEditImage"
           />
         </aside>
       </div>
@@ -193,6 +203,13 @@ const handleLogout = () => {
         <p><strong>Backend:</strong> http://localhost:8000/api</p>
         <p><strong>Logged in as:</strong> {{ userStore.email }}</p>
       </footer>
+
+      <!-- Image Editor Modal -->
+      <ImageEditor
+        v-if="showImageEditor && imageToEdit"
+        :media-file="imageToEdit"
+        @close="closeImageEditor"
+      />
     </template>
   </div>
 </template>

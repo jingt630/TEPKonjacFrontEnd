@@ -56,8 +56,8 @@ Deno.test("MediaManagement Concept Tests", async (t) => {
       userId: mockUser,
       filePath: "/documents",
       mediaType: "txt",
-      filename: "invalid-file", // Contains hyphen
-      relativePath: "local/path/to/invalid-file.txt",
+      filename: "invalid@file#name", // Contains invalid characters @ and #
+      relativePath: "local/path/to/invalid@file.txt",
     });
 
     console.log(
@@ -69,7 +69,7 @@ Deno.test("MediaManagement Concept Tests", async (t) => {
     assertEquals(
       "error" in uploadResult,
       true,
-      "Filename can only contain alphabets, numbers, and spaces.",
+      "Filename can only contain alphabets, numbers, spaces, dots, hyphens, and underscores.",
     );
   });
 

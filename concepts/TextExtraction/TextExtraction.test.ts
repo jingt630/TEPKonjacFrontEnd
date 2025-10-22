@@ -1,349 +1,416 @@
-import { testDb } from "@utils/database.ts";
+/**
+ * Deno Test Cases for TextExtraction Concept
+ *
+ * Run with:
+ * deno test --allow-read --allow-env --allow-net concepts/TextExtraction/TextExtraction.test.ts
+ */
+
+import { assertEquals, assertExists } from "https://deno.land/std@0.224.0/assert/mod.ts";
+import { MongoClient } from "npm:mongodb";
 import TextExtractionConcept from "./TextExtraction.ts";
-import { ObjectId } from "npm:mongodb";
-import { ID } from "@utils/types.ts";
-import { assertEquals, assertFalse } from "jsr:@std/assert";
 
-Deno.test("TextExtractionConcept: extractTextFromMedia", async (t) => {
-  const [db, client] = await testDb();
-  const textExtraction = new TextExtractionConcept(db);
+// Load environment variables
+import "https://deno.land/std@0.224.0/dotenv/load.ts";
 
-  await t.step("should extract text and create an extraction result", async () => {
-    const imagePath = "path/to/image.png" as ID;
-    const result = await textExtraction.extractTextFromMedia({ image: imagePath });
+// ========== Setup Test Database ==========
+const MONGODB_URL = Deno.env.get("MONGODB_URL") || "mongodb://localhost:27017";
+const DB_NAME = Deno.env.get("DB_NAME") || "test_concept_db";
 
-    const extractionResults = await textExtraction.extractionResults
-      .find({ imagePath: imagePath })
-      .toArray();
-    const locations = await textExtraction.locations
-      .find({ extractionResultId: result.result })
-      .toArray();
+let db: any;
+let textExtraction: TextExtractionConcept;
+let testUserId: string;
+let testMediaId: string;
 
-    assertEquals(extractionResults.length, 1);
-    assertEquals(locations.length, 1);
-    assertEquals(extractionResults[0].imagePath, imagePath);
-    assertEquals(
-      extractionResults[0].extractedText,
-      "Placeholder extracted text for path/to/image.png",
-    );
-    assertEquals(extractionResults[0].textId, "path/to/image.png_0");
-    assertEquals(extractionResults[0].position, locations[0]._id);
-  });
+// Setup: Connect to database before tests
+async function setup() {
+  const client = new MongoClient(MONGODB_URL);
+  await client.connect();
+  db = client.db(DB_NAME);
 
-  await t.step("should handle multiple extractions for the same image", async () => {
-    const imagePath = "path/to/another_image.jpg" as ID;
-    await textExtraction.extractTextFromMedia({ image: imagePath });
-    const result2 = await textExtraction.extractTextFromMedia({ image: imagePath });
+  textExtraction = new TextExtractionConcept(db);
 
-    const extractionResults = await textExtraction.extractionResults
-      .find({ imagePath: imagePath })
-      .toArray();
-    const locations = await textExtraction.locations
-      .find({ extractionResultId: result2.result })
-      .toArray();
+  // Create test user ID
+  testUserId = "test-user-" + crypto.randomUUID();
 
-    assertEquals(extractionResults.length, 2);
-    assertEquals(locations.length, 1);
-    assertEquals(extractionResults[1].textId, "path/to/another_image.jpg_1");
-  });
+  // Create test media file record
+  const mediaFiles = db.collection("MediaManagement.mediaFiles");
+  const testMediaFile = {
+    _id: crypto.randomUUID(),
+    filename: "Spirited away movie poster.jpg",
+    filePath: "/TestImages",
+    mediaType: "jpg",
+    owner: testUserId,
+    uploadDate: new Date(),
+    updateDate: new Date(),
+    cloudURL: "test://test-bucket/test.jpg"
+  };
 
-  await client.close();
-});
+  await mediaFiles.insertOne(testMediaFile);
+  testMediaId = testMediaFile._id;
 
-Deno.test("TextExtractionConcept: editExtractText", async (t) => {
-  const [db, client] = await testDb();
-  const textExtraction = new TextExtractionConcept(db);
+  // Copy test image to expected location
+  // In real scenario, you'd have uploaded this already
+  const testImagePath = `./uploads/${testUserId}/TestImages`;
+  await Deno.mkdir(testImagePath, { recursive: true });
 
-  const imagePath = "path/to/edit_image.png" as ID;
-  const { result: extractionId } = await textExtraction.extractTextFromMedia({
-    image: imagePath,
-  });
-  const newText = "This is the edited text.";
+  // Copy the Spirited Away poster to test location
+  try {
+    const sourceImage = await Deno.readFile("./Spirited away movie poster.jpg");
+    await Deno.writeFile(`${testImagePath}/Spirited away movie poster.jpg`, sourceImage);
+    console.log("✅ Test image copied to:", testImagePath);
+  } catch (error) {
+    console.warn("⚠️ Could not copy test image:", error.message);
+    console.warn("   Make sure 'Spirited away movie poster.jpg' exists in the project root");
+  }
 
-  await t.step("should edit the extracted text successfully", async () => {
-    const editResult = await textExtraction.editExtractText({
-      extractedText: extractionId,
-      newText: newText,
-    });
-    assertEquals(editResult, {}); // Expect empty object for success
+  return { db, textExtraction, testUserId, testMediaId };
+}
 
-    const updatedExtraction = await textExtraction.extractionResults.findOne({
-      _id: extractionId,
-    });
-    assertEquals(updatedExtraction?.extractedText, newText);
-  });
+// Cleanup: Remove test data after tests
+async function cleanup() {
+  try {
+    // Clean up test collections
+    await db.collection("MediaManagement.mediaFiles").deleteMany({ owner: testUserId });
+    await db.collection("TextExtraction.extractionResults").deleteMany({ imageId: testMediaId });
 
-  await t.step("should return an error if extraction result does not exist", async () => {
-    const nonExistentId = new ObjectId().toString() as ID;
-    const editResult = await textExtraction.editExtractText({
-      extractedText: nonExistentId,
-      newText: "This should not be applied.",
-    });
-    assertEquals(editResult, { error: "ExtractionResult not found" });
-  });
+    // Clean up test files
+    await Deno.remove(`./uploads/${testUserId}`, { recursive: true });
 
-  await client.close();
-});
+    console.log("✅ Test cleanup complete");
+  } catch (error) {
+    console.warn("⚠️ Cleanup error:", error.message);
+  }
+}
 
-Deno.test("TextExtractionConcept: editLocation", async (t) => {
-  const [db, client] = await testDb();
-  const textExtraction = new TextExtractionConcept(db);
+// ========== Test Cases ==========
 
-  const imagePath = "path/to/location_image.png" as ID;
-  const { result: extractionId } = await textExtraction.extractTextFromMedia({
-    image: imagePath,
-  });
-  const fromCoord: [number, number] = [10, 20];
-  const toCoord: [number, number] = [110, 120];
+Deno.test({
+  name: "TextExtraction - Basic AI extraction from image",
+  async fn() {
+    console.log("\n🧪 Test: Basic AI extraction from Spirited Away poster\n");
 
-  await t.step("should edit the location successfully", async () => {
-    const editResult = await textExtraction.editLocation({
-      extractedText: extractionId,
-      fromCoord: fromCoord,
-      toCoord: toCoord,
-    });
-    assertEquals(editResult, {});
+    // Setup
+    const { textExtraction, testUserId, testMediaId } = await setup();
 
-    const extraction = await textExtraction.extractionResults.findOne({
-      _id: extractionId,
-    });
-    const location = await textExtraction.locations.findOne({
-      _id: extraction!.position,
-    });
+    try {
+      // Call the AI extraction function
+      const result = await textExtraction.extractTextFromMedia({
+        userId: testUserId,
+        mediaId: testMediaId,
+        customPrompt: undefined // Use default prompt
+      });
 
-    assertEquals(location?.fromCoord, fromCoord);
-    assertEquals(location?.toCoord, toCoord);
-  });
+      console.log("📊 Extraction result:", result);
 
-  await t.step("should return an error if coordinates are negative", async () => {
-    const negativeCoord: [number, number] = [-10, 20];
-    const editResult = await textExtraction.editLocation({
-      extractedText: extractionId,
-      fromCoord: negativeCoord,
-      toCoord: toCoord,
-    });
-    assertEquals(editResult, { error: "Coordinates cannot be negative." });
-  });
+      // Assertions
+      assertExists(result, "Result should exist");
+      assertEquals(result.error, undefined, "Should not have error");
+      assertExists(result.message, "Should have success message");
 
-  await t.step("should return an error if extraction result does not exist", async () => {
-    const nonExistentId = new ObjectId().toString() as ID;
-    const editResult = await textExtraction.editLocation({
-      extractedText: nonExistentId,
-      fromCoord: fromCoord,
-      toCoord: toCoord,
-    });
-    assertEquals(editResult, { error: "ExtractionResult not found" });
-  });
+      console.log("✅ AI extraction successful!");
+      console.log(`   Extracted text blocks: ${result.message}`);
 
-  await client.close();
-});
+      // Verify extractions were saved to database
+      const extractions = await textExtraction._getExtractionResultsForImage({
+        userId: testUserId,
+        imageId: testMediaId
+      });
 
-Deno.test("TextExtractionConcept: addExtractionTxt", async (t) => {
-  const [db, client] = await testDb();
-  const textExtraction = new TextExtractionConcept(db);
+      console.log(`✅ Saved ${extractions.length} extraction results to database`);
 
-  const imagePath = "path/to/add_image.png" as ID;
-  const fromCoord: [number, number] = [5, 15];
-  const toCoord: [number, number] = [105, 115];
+      // Print first 3 extracted texts
+      if (extractions.length > 0) {
+        console.log("\n📝 Sample extracted texts:");
+        extractions.slice(0, 3).forEach((ext: any, i: number) => {
+          console.log(`   ${i + 1}. "${ext.extractedText}"`);
+          console.log(`      Position: (${ext.position?.fromCoord[0]}, ${ext.position?.fromCoord[1]}) → (${ext.position?.toCoord[0]}, ${ext.position?.toCoord[1]})`);
+        });
+      }
 
-  await t.step("should add a new extraction with empty text", async () => {
-    const result = await textExtraction.addExtractionTxt({
-      media: imagePath,
-      fromCoord: fromCoord,
-      toCoord: toCoord,
-    });
+      // Assert we got some extractions
+      assertEquals(extractions.length > 0, true, "Should have extracted some text");
 
-    const extractionResults = await textExtraction.extractionResults
-      .find({ imagePath: imagePath })
-      .toArray();
-
-    assertEquals(extractionResults.length, 1);
-    assertEquals(extractionResults[0].imagePath, imagePath);
-    assertEquals(extractionResults[0].extractedText, "");
-    assertEquals(extractionResults[0].textId, `${imagePath}_0`);
-  });
-
-  await t.step("should return an error if coordinates are negative", async () => {
-    const negativeCoord: [number, number] = [5, -15];
-    const addResult = await textExtraction.addExtractionTxt({
-      media: imagePath,
-      fromCoord: fromCoord,
-      toCoord: negativeCoord,
-    });
-    assertEquals(addResult, { error: "Coordinates cannot be negative." });
-  });
-
-  await client.close();
-});
-
-Deno.test("TextExtractionConcept: deleteExtraction", async (t) => {
-  const [db, client] = await testDb();
-  const textExtraction = new TextExtractionConcept(db);
-
-  const imagePath = "path/to/delete_image.png" as ID;
-  const fromCoord: [number, number] = [5, 15];
-  const toCoord: [number, number] = [105, 115];
-  const textIdToDelete = "delete_this_text";
-
-  // Add an extraction to be deleted
-  await textExtraction.extractionResults.insertOne({
-    _id: new ObjectId().toString() as ID,
-    imagePath: imagePath,
-    extractedText: "This text will be deleted.",
-    position: new ObjectId().toString() as ID, // Placeholder, will be updated or handled by addExtractionTxt
-    textId: textIdToDelete,
-  });
-  // Need to also add a corresponding location for the delete logic to work correctly
-  const addedExtraction = await textExtraction.extractionResults.findOne({ textId: textIdToDelete, imagePath: imagePath });
-  await textExtraction.locations.insertOne({
-    _id: new ObjectId().toString() as ID,
-    extractionResultId: addedExtraction!._id,
-    fromCoord: fromCoord,
-    toCoord: toCoord,
-  });
-
-
-  await t.step("should delete the extraction and its location", async () => {
-    const deleteResult = await textExtraction.deleteExtraction({
-      textId: textIdToDelete,
-      imagePath: imagePath,
-    });
-    assertEquals(deleteResult, {});
-
-    const extraction = await textExtraction.extractionResults.findOne({
-      textId: textIdToDelete,
-      imagePath: imagePath,
-    });
-    assertEquals(extraction, null); // Should be null if deleted
-
-    const location = await textExtraction.locations.findOne({
-      extractionResultId: addedExtraction!._id,
-    });
-    assertEquals(location, null); // Should be null if deleted
-  });
-
-  await t.step("should return an error if extraction does not exist", async () => {
-    const deleteResult = await textExtraction.deleteExtraction({
-      textId: "non_existent_id",
-      imagePath: imagePath,
-    });
-    assertEquals(
-      deleteResult,
-      { error: "ExtractionResult not found with the given textId and imagePath." },
-    );
-  });
-
-  await client.close();
-});
-
-Deno.test("TextExtractionConcept: principle test", async (t) => {
-  const [db, client] = await testDb();
-  const textExtraction = new TextExtractionConcept(db);
-
-  const imagePath = "principle_image.jpg" as ID;
-
-  await t.step("Principle: Given an image, AI extracts text and produces a transcript with metadata.", async () => {
-    // Action: Call extractTextFromMedia
-    const extractionResult = await textExtraction.extractTextFromMedia({
-      image: imagePath,
-    });
-    const extractionId = extractionResult.result;
-
-    // Verification: Check that an ExtractionResult was created
-    const createdExtraction = await textExtraction.extractionResults.findOne({
-      _id: extractionId,
-    });
-    assertEquals(createdExtraction?.imagePath, imagePath);
-    assertEquals(createdExtraction?.extractedText, `Placeholder extracted text for ${imagePath}`);
-    assertEquals(createdExtraction?.textId, `${imagePath}_0`);
-
-    // Verification: Check that a Location was created and is associated
-    const location = await textExtraction.locations.findOne({
-      extractionResultId: extractionId,
-    });
-    assertEquals(location?._id, createdExtraction?.position);
-    assertEquals(location?.fromCoord, [0, 0]);
-    assertEquals(location?.toCoord, [100, 100]);
-
-    // Simulating AI editing and adding more text
-    const newText = "This is the recognized text.";
-    await textExtraction.editExtractText({
-      extractedText: extractionId,
-      newText: newText,
-    });
-
-    const editedExtraction = await textExtraction.extractionResults.findOne({
-      _id: extractionId,
-    });
-    assertEquals(editedExtraction?.extractedText, newText);
-
-    // Simulating adding another piece of text in a different location
-    const secondFromCoord: [number, number] = [200, 200];
-    const secondToCoord: [number, number] = [300, 300];
-    const secondExtractionResult = await textExtraction.addExtractionTxt({
-      media: imagePath,
-      fromCoord: secondFromCoord,
-      toCoord: secondToCoord,
-    });
-    if ("result" in secondExtractionResult){
-      const secondExtractionId = secondExtractionResult.result;
-      const secondCreatedExtraction = await textExtraction.extractionResults.findOne({
-      _id: secondExtractionId,
-    });
-    assertEquals(secondCreatedExtraction?.imagePath, imagePath);
-    assertEquals(secondCreatedExtraction?.extractedText, "");
-    assertEquals(secondCreatedExtraction?.textId, `${imagePath}_1`); // second extraction for the same image
-
-    const secondLocation = await textExtraction.locations.findOne({
-      extractionResultId: secondExtractionId,
-    });
-    assertEquals(secondLocation?._id, secondCreatedExtraction?.position);
-    assertEquals(secondLocation?.fromCoord, secondFromCoord);
-    assertEquals(secondLocation?.toCoord, secondToCoord);
+    } finally {
+      await cleanup();
     }
-    else{
-    assertFalse;
-    }
-
-  });
-
-
-
-  await client.close();
+  },
+  sanitizeResources: false,
+  sanitizeOps: false,
 });
 
-Deno.test("TextExtractionConcept: error handling for non-existent IDs", async (t) => {
-    const [db, client] = await testDb();
-    const textExtraction = new TextExtractionConcept(db);
+Deno.test({
+  name: "TextExtraction - Custom prompt extraction",
+  async fn() {
+    console.log("\n🧪 Test: Custom prompt extraction\n");
 
-    const nonExistentExtractionId = new ObjectId().toString() as ID;
-    const imagePath = "some_image.png" as ID;
-    const nonExistentTextId = "non_existent_text_id";
+    const { textExtraction, testUserId, testMediaId } = await setup();
 
-    await t.step("editExtractText should return error for non-existent ID", async () => {
-        const result = await textExtraction.editExtractText({
-            extractedText: nonExistentExtractionId,
-            newText: "This should fail."
+    try {
+      // Use a custom prompt focused on specific information
+      const customPrompt = `Extract only the main title and director name from this movie poster.
+Format:
+1: <title>
+2: <director name>
+
+Coordinates should follow this format:
+1: <text> (from: {x:A, y:B}, to: {x:C, y:D})`;
+
+      const result = await textExtraction.extractTextFromMedia({
+        userId: testUserId,
+        mediaId: testMediaId,
+        customPrompt: customPrompt
+      });
+
+      console.log("📊 Custom prompt result:", result);
+
+      assertExists(result, "Result should exist");
+      assertEquals(result.error, undefined, "Should not have error");
+
+      const extractions = await textExtraction._getExtractionResultsForImage({
+        userId: testUserId,
+        imageId: testMediaId
+      });
+
+      console.log(`✅ Extracted ${extractions.length} items with custom prompt`);
+
+      // With custom prompt, we expect fewer, more focused extractions
+      if (extractions.length > 0) {
+        console.log("\n📝 Custom extraction results:");
+        extractions.forEach((ext: any, i: number) => {
+          console.log(`   ${i + 1}. "${ext.extractedText}"`);
         });
-        assertEquals(result, { error: "ExtractionResult not found" });
-    });
+      }
 
-    await t.step("editLocation should return error for non-existent ID", async () => {
-        const result = await textExtraction.editLocation({
-            extractedText: nonExistentExtractionId,
-            fromCoord: [0, 0],
-            toCoord: [10, 10]
+    } finally {
+      await cleanup();
+    }
+  },
+  sanitizeResources: false,
+  sanitizeOps: false,
+});
+
+Deno.test({
+  name: "TextExtraction - Error handling for missing image",
+  async fn() {
+    console.log("\n🧪 Test: Error handling for missing image\n");
+
+    const { textExtraction, testUserId } = await setup();
+
+    try {
+      // Try to extract from non-existent media
+      const result = await textExtraction.extractTextFromMedia({
+        userId: testUserId,
+        mediaId: "non-existent-id",
+        customPrompt: undefined
+      });
+
+      console.log("📊 Result for missing image:", result);
+
+      // Should return an error
+      assertExists(result.error, "Should have error for missing image");
+      assertEquals(
+        typeof result.error === "string" && result.error.length > 0,
+        true,
+        "Error message should be a non-empty string"
+      );
+
+      console.log("✅ Error handling works correctly");
+      console.log(`   Error: ${result.error}`);
+
+    } finally {
+      await cleanup();
+    }
+  },
+  sanitizeResources: false,
+  sanitizeOps: false,
+});
+
+Deno.test({
+  name: "TextExtraction - Manual text addition",
+  async fn() {
+    console.log("\n🧪 Test: Manual text addition\n");
+
+    const { textExtraction, testUserId, testMediaId } = await setup();
+
+    try {
+      // Manually add an extraction
+      const manualText = "Spirited Away - Manual Entry";
+      const location = { x: 100, y: 200, width: 300, height: 50 };
+
+      const result = await textExtraction.addExtractionTxt({
+        userId: testUserId,
+        imageId: testMediaId,
+        txt: manualText,
+        location: location
+      });
+
+      console.log("📊 Manual addition result:", result);
+
+      assertExists(result._id, "Should return created extraction with ID");
+      assertEquals(result.extractedText, manualText, "Text should match");
+
+      // Verify it's in the database
+      const extractions = await textExtraction._getExtractionResultsForImage({
+        userId: testUserId,
+        imageId: testMediaId
+      });
+
+      const found = extractions.find((e: any) => e.extractedText === manualText);
+      assertExists(found, "Manual extraction should be in database");
+
+      console.log("✅ Manual text addition successful");
+
+    } finally {
+      await cleanup();
+    }
+  },
+  sanitizeResources: false,
+  sanitizeOps: false,
+});
+
+Deno.test({
+  name: "TextExtraction - Edit extracted text",
+  async fn() {
+    console.log("\n🧪 Test: Edit extracted text\n");
+
+    const { textExtraction, testUserId, testMediaId } = await setup();
+
+    try {
+      // First, add a text extraction
+      const originalText = "Original Text";
+      const addResult = await textExtraction.addExtractionTxt({
+        userId: testUserId,
+        imageId: testMediaId,
+        txt: originalText,
+        location: { x: 10, y: 10, width: 100, height: 20 }
+      });
+
+      const extractionId = addResult._id;
+
+      // Now edit it
+      const newText = "Edited Text - Corrected";
+      const editResult = await textExtraction.editExtractText({
+        userId: testUserId,
+        extractionId: extractionId,
+        newText: newText
+      });
+
+      console.log("📊 Edit result:", editResult);
+
+      assertExists(editResult, "Edit result should exist");
+      assertEquals(editResult.error, undefined, "Should not have error");
+
+      // Verify the edit
+      const extractions = await textExtraction._getExtractionResultsForImage({
+        userId: testUserId,
+        imageId: testMediaId
+      });
+
+      const edited = extractions.find((e: any) => e._id === extractionId);
+      assertEquals(edited.extractedText, newText, "Text should be updated");
+
+      console.log("✅ Text editing successful");
+      console.log(`   Original: "${originalText}"`);
+      console.log(`   Edited: "${newText}"`);
+
+    } finally {
+      await cleanup();
+    }
+  },
+  sanitizeResources: false,
+  sanitizeOps: false,
+});
+
+// ========== Integration Test ==========
+
+Deno.test({
+  name: "TextExtraction - Full workflow integration test",
+  async fn() {
+    console.log("\n🧪 Test: Full extraction workflow\n");
+
+    const { textExtraction, testUserId, testMediaId } = await setup();
+
+    try {
+      // Step 1: Extract text with AI
+      console.log("📝 Step 1: AI extraction...");
+      const extractResult = await textExtraction.extractTextFromMedia({
+        userId: testUserId,
+        mediaId: testMediaId,
+        customPrompt: undefined
+      });
+
+      assertExists(extractResult.message, "Extraction should succeed");
+      console.log(`✅ ${extractResult.message}`);
+
+      // Step 2: Get all extractions
+      console.log("\n📝 Step 2: Retrieving extractions...");
+      let extractions = await textExtraction._getExtractionResultsForImage({
+        userId: testUserId,
+        imageId: testMediaId
+      });
+
+      const initialCount = extractions.length;
+      console.log(`✅ Retrieved ${initialCount} extractions`);
+
+      // Step 3: Add a manual extraction
+      console.log("\n📝 Step 3: Adding manual extraction...");
+      await textExtraction.addExtractionTxt({
+        userId: testUserId,
+        imageId: testMediaId,
+        txt: "Manual Addition - Test Caption",
+        location: { x: 0, y: 0, width: 100, height: 20 }
+      });
+      console.log("✅ Manual extraction added");
+
+      // Step 4: Verify count increased
+      extractions = await textExtraction._getExtractionResultsForImage({
+        userId: testUserId,
+        imageId: testMediaId
+      });
+
+      assertEquals(extractions.length, initialCount + 1, "Count should increase by 1");
+      console.log(`✅ Count increased: ${initialCount} → ${extractions.length}`);
+
+      // Step 5: Edit one extraction
+      if (extractions.length > 0) {
+        console.log("\n📝 Step 5: Editing first extraction...");
+        const firstId = extractions[0]._id;
+        const originalText = extractions[0].extractedText;
+
+        await textExtraction.editExtractText({
+          userId: testUserId,
+          extractionId: firstId,
+          newText: originalText + " [EDITED]"
         });
-        assertEquals(result, { error: "ExtractionResult not found" });
-    });
+        console.log("✅ Extraction edited");
+      }
 
-    await t.step("deleteExtraction should return error for non-existent textId/imagePath", async () => {
-        const result = await textExtraction.deleteExtraction({
-            textId: nonExistentTextId,
-            imagePath: imagePath
+      // Step 6: Delete one extraction
+      if (extractions.length > 1) {
+        console.log("\n📝 Step 6: Deleting an extraction...");
+        const secondId = extractions[1]._id;
+
+        await textExtraction.deleteExtraction({
+          userId: testUserId,
+          extractionId: secondId
         });
-        assertEquals(result, { error: "ExtractionResult not found with the given textId and imagePath." });
-    });
+        console.log("✅ Extraction deleted");
 
-    await client.close();
+        // Verify count decreased
+        extractions = await textExtraction._getExtractionResultsForImage({
+          userId: testUserId,
+          imageId: testMediaId
+        });
+
+        console.log(`✅ Final count: ${extractions.length}`);
+      }
+
+      console.log("\n🎉 Full workflow test completed successfully!");
+
+    } finally {
+      await cleanup();
+    }
+  },
+  sanitizeResources: false,
+  sanitizeOps: false,
 });

@@ -13,6 +13,7 @@ export const API_ENDPOINTS = {
   ADD_TRANSLATED_TEXT: '/MediaManagement/addTranslatedText',
   CREATE_FOLDER: '/MediaManagement/createFolder',
   LIST_FOLDERS: '/MediaManagement/_listFolders',
+  SERVE_IMAGE: '/MediaManagement/_serveImage',
 
   // ========== TextExtraction Concept ==========
   EXTRACT_TEXT: '/TextExtraction/extractTextFromMedia',
@@ -26,6 +27,7 @@ export const API_ENDPOINTS = {
   // ========== Translation Concept ==========
   CREATE_TRANSLATION: '/Translation/createTranslation',
   EDIT_TRANSLATION: '/Translation/editTranslation',
+  DELETE_TRANSLATION: '/Translation/deleteTranslation',
   CHANGE_LANGUAGE: '/Translation/changeLanguage',
   GET_TRANSLATION_BY_ID: '/Translation/_getTranslationById',
   GET_TRANSLATIONS_BY_ORIGINAL: '/Translation/_getTranslationsByOriginalTextId',

@@ -20,9 +20,10 @@ class MediaApiService {
    * @param {string} params.mediaType - MIME type or file extension
    * @param {string} params.filename - Original filename
    * @param {string} params.relativePath - Valid pathway on user's computer
+   * @param {string} params.fileData - Base64 encoded file data (optional)
    * @returns {Promise<MediaFile | {error: string}>}
    */
-  async upload({ filePath, mediaType, filename, relativePath }) {
+  async upload({ filePath, mediaType, filename, relativePath, fileData }) {
     try {
       const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.UPLOAD_MEDIA}`, {
         method: 'POST',
@@ -35,6 +36,7 @@ class MediaApiService {
           mediaType,
           filename,
           relativePath,
+          fileData, // Include the actual file data
         }),
       });
 

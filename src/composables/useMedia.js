@@ -45,16 +45,18 @@ export function useMedia() {
   /**
    * Upload a new media file
    */
-  const uploadFile = async ({ filePath, mediaType, filename, relativePath }) => {
+  const uploadFile = async ({ filePath, mediaType, filename, relativePath, fileData }) => {
     loading.value = true;
     error.value = null;
 
     try {
+      console.log('📤 Uploading file to:', filePath || currentPath.value);
       const result = await mediaApi.upload({
         filePath: filePath || currentPath.value,
         mediaType,
         filename,
-        relativePath
+        relativePath,
+        fileData  // Pass the base64 file data
       });
 
       if (result.error) {
@@ -62,9 +64,12 @@ export function useMedia() {
         return { success: false, error: result.error };
       }
 
+      console.log('✅ Upload successful! Refreshing media list...');
       await loadMedia();
+      console.log('🔄 Media list refreshed. Files count:', mediaFiles.value.length);
       return { success: true, data: result };
     } catch (err) {
+      console.error('❌ Upload error:', err);
       error.value = err.message;
       return { success: false, error: err.message };
     } finally {

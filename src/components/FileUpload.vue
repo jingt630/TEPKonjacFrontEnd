@@ -1,6 +1,13 @@
 <script setup>
-import { ref, defineEmits } from 'vue'
+import { ref, defineProps, defineEmits } from 'vue'
 import { useMedia } from '../composables/useMedia'
+
+const props = defineProps({
+  currentPath: {
+    type: String,
+    default: '/'
+  }
+})
 
 const emit = defineEmits(['fileUploaded'])
 
@@ -50,21 +57,35 @@ const handleUpload = async () => {
     // Get file extension
     const extension = selectedFile.value.name.split('.').pop().toLowerCase()
 
+    console.log('🚀 Starting upload...', {
+      path: props.currentPath || '/',
+      filename: selectedFile.value.name,
+      hasFileData: !!previewUrl.value
+    })
+
     const result = await uploadFile({
-      filePath: '/',
+      filePath: props.currentPath || '/',  // Upload to current directory
       mediaType: extension,
       filename: selectedFile.value.name,
-      relativePath: selectedFile.value.name  // In real app, this would be the actual path
+      relativePath: selectedFile.value.name,  // In real app, this would be the actual path
+      fileData: previewUrl.value  // Send the base64 encoded file data
     })
 
     if (result.success) {
+      console.log('✅ Upload completed successfully!')
       alert('✅ File uploaded successfully!')
+
+      // Wait a tiny bit to ensure state updates propagate
+      await new Promise(resolve => setTimeout(resolve, 100))
+
       emit('fileUploaded', result.data)
       clearFile()
     } else {
+      console.error('❌ Upload failed:', result.error)
       alert('❌ Upload failed: ' + result.error)
     }
   } catch (error) {
+    console.error('❌ Upload error:', error)
     alert('❌ Upload error: ' + error.message)
   } finally {
     uploading.value = false

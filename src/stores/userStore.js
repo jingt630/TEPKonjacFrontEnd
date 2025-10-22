@@ -34,17 +34,58 @@ export const useUserStore = defineStore('user', () => {
 
       if (user && user.user) {
         // Get full user details
-        const userDetails = await userApi.getUserById(user.user)
         const usernameData = await userApi.getUserUsername(user.user)
         const emailData = await userApi.getUserEmail(user.user)
 
+        console.log('📥 Raw username data:', JSON.stringify(usernameData))
+        console.log('📥 Raw email data:', JSON.stringify(emailData))
+        console.log('📥 Username data type:', typeof usernameData, Array.isArray(usernameData))
+
+        // Extract username - handle multiple response formats
+        let username = ''
+        if (Array.isArray(usernameData)) {
+          // If it's an array
+          if (usernameData.length > 0) {
+            if (typeof usernameData[0] === 'string') {
+              username = usernameData[0] // ["username"]
+            } else if (usernameData[0]?.username) {
+              username = usernameData[0].username // [{ username: "..." }]
+            }
+          }
+        } else if (typeof usernameData === 'string') {
+          username = usernameData // "username"
+        } else if (usernameData?.username) {
+          username = usernameData.username // { username: "..." }
+        }
+
+        // Extract email - handle multiple response formats
+        let userEmail = email // Default to login email
+        if (Array.isArray(emailData)) {
+          if (emailData.length > 0) {
+            if (typeof emailData[0] === 'string') {
+              userEmail = emailData[0]
+            } else if (emailData[0]?.email) {
+              userEmail = emailData[0].email
+            }
+          }
+        } else if (typeof emailData === 'string') {
+          userEmail = emailData
+        } else if (emailData?.email) {
+          userEmail = emailData.email
+        }
+
+        console.log('✅ Extracted username:', username)
+        console.log('✅ Extracted email:', userEmail)
+
         currentUser.value = {
           user: user.user,
-          username: usernameData.username || '',
-          email: emailData.email || email
+          username: username || email, // Fallback to email if username extraction failed
+          email: userEmail
         }
 
         isAuthenticated.value = true
+
+        console.log('✅ Final logged in user:', JSON.stringify(currentUser.value))
 
         // Save to localStorage
         localStorage.setItem('currentUser', JSON.stringify(currentUser.value))
@@ -103,7 +144,13 @@ export const useUserStore = defineStore('user', () => {
   const logout = () => {
     currentUser.value = null
     isAuthenticated.value = false
-    localStorage.removeItem('currentUser')
+    error.value = null
+
+    // Clear ALL localStorage to prevent data leakage between users
+    localStorage.clear()
+
+    // Force page reload to clear any cached state
+    window.location.reload()
   }
 
   const restoreSession = () => {

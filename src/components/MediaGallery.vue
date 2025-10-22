@@ -7,6 +7,10 @@ const props = defineProps({
   mediaFiles: {
     type: Array,
     required: true
+  },
+  currentPath: {
+    type: String,
+    default: '/'
   }
 })
 
@@ -56,6 +60,7 @@ const toggleUpload = () => {
 
     <FileUpload
       v-if="showUpload"
+      :current-path="currentPath"
       @file-uploaded="handleFileUploaded"
       class="upload-section"
     />

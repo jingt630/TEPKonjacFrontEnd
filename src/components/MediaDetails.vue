@@ -1,5 +1,5 @@
 <script setup>
-import { defineProps, defineEmits } from 'vue'
+import { defineProps, defineEmits, computed } from 'vue'
 
 const props = defineProps({
   mediaFile: {
@@ -8,38 +8,18 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['updateContext', 'updateTranslation'])
+const emit = defineEmits(['editImage'])
 
-const handleUpdateContext = () => {
-  const newContext = prompt('Enter extracted text context (JSON format):')
-  if (newContext) {
-    try {
-      const contextObj = JSON.parse(newContext)
-      // Send update request UP to parent
-      emit('updateContext', {
-        mediaId: props.mediaFile._id,
-        context: contextObj
-      })
-    } catch (e) {
-      alert('Invalid JSON format')
-    }
-  }
-}
+// Check if the file is an image that can be edited
+const isImageFile = computed(() => {
+  if (!props.mediaFile) return false
+  const imageTypes = ['jpg', 'jpeg', 'png', 'gif', 'webp']
+  return imageTypes.includes(props.mediaFile.mediaType?.toLowerCase())
+})
 
-const handleUpdateTranslation = () => {
-  const translation = prompt('Enter translation (JSON format):')
-  if (translation) {
-    try {
-      const translationObj = JSON.parse(translation)
-      // Send update request UP to parent
-      emit('updateTranslation', {
-        mediaId: props.mediaFile._id,
-        translation: translationObj
-      })
-    } catch (e) {
-      alert('Invalid JSON format')
-    }
-  }
+// Handle clicking the "Edit Image" button
+const handleEditImage = () => {
+  emit('editImage', props.mediaFile)
 }
 </script>
 
@@ -50,7 +30,16 @@ const handleUpdateTranslation = () => {
     </div>
 
     <div v-else class="details-content">
-      <h2>{{ mediaFile.filename }}</h2>
+      <div class="header-section">
+        <h2>{{ mediaFile.filename }}</h2>
+        <button
+          v-if="isImageFile"
+          @click="handleEditImage"
+          class="btn-edit-image"
+        >
+          ✏️ Edit Image
+        </button>
+      </div>
 
       <div class="detail-section">
         <h3>File Information</h3>
@@ -73,21 +62,17 @@ const handleUpdateTranslation = () => {
       </div>
 
       <div class="detail-section">
-        <div class="section-header">
-          <h3>Extracted Context</h3>
-          <button @click="handleUpdateContext">Update</button>
-        </div>
+        <h3>Extracted Context</h3>
         <pre v-if="mediaFile.context">{{ JSON.stringify(mediaFile.context, null, 2) }}</pre>
         <p v-else class="empty">No context available</p>
+        <p class="note">Auto-updated by text extraction system</p>
       </div>
 
       <div class="detail-section">
-        <div class="section-header">
-          <h3>Translations</h3>
-          <button @click="handleUpdateTranslation">Update</button>
-        </div>
+        <h3>Translations</h3>
         <pre v-if="mediaFile.translatedText">{{ JSON.stringify(mediaFile.translatedText, null, 2) }}</pre>
         <p v-else class="empty">No translations available</p>
+        <p class="note">Auto-updated after translation processing</p>
       </div>
     </div>
   </div>
@@ -109,22 +94,44 @@ const handleUpdateTranslation = () => {
   color: #888;
 }
 
-.details-content h2 {
-  margin-top: 0;
+.header-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 1.5rem;
   border-bottom: 2px solid #646cff;
   padding-bottom: 0.5rem;
 }
 
-.detail-section {
-  margin-bottom: 2rem;
+.header-section h2 {
+  margin: 0;
 }
 
-.section-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 0.75rem;
+.btn-edit-image {
+  background: #646cff;
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1em;
+  font-weight: 600;
+  transition: all 0.2s;
+  box-shadow: 0 2px 8px rgba(100, 108, 255, 0.3);
+}
+
+.btn-edit-image:hover {
+  background: #535bf2;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(100, 108, 255, 0.5);
+}
+
+.btn-edit-image:active {
+  transform: translateY(0);
+}
+
+.detail-section {
+  margin-bottom: 2rem;
 }
 
 .detail-section h3 {
@@ -157,6 +164,13 @@ pre {
 
 .empty {
   color: #666;
+  font-style: italic;
+}
+
+.note {
+  margin-top: 0.5rem;
+  font-size: 0.85em;
+  color: #888;
   font-style: italic;
 }
 </style>
