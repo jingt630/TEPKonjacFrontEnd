@@ -54,8 +54,21 @@ const selectedFile = ref(null)
 
 // Handle folder click from FolderBrowser component
 const handleFolderClick = (folder) => {
-  console.log('Folder clicked:', folder.name)
-  currentPath.value = folder.filePath + '/' + folder.name
+  console.log('📁 Folder clicked:', folder.name)
+  console.log('   - Current filePath:', folder.filePath)
+  
+  // Build new path, avoiding double slashes
+  let newPath = folder.filePath
+  if (!newPath.endsWith('/')) {
+    newPath += '/'
+  }
+  newPath += folder.name
+  
+  // Normalize path (remove double slashes)
+  newPath = newPath.replace(/\/+/g, '/')
+  
+  console.log('   - New path:', newPath)
+  currentPath.value = newPath
   loadMedia()
 }
 

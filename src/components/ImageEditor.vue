@@ -247,6 +247,11 @@ const addExtraction = async () => {
 
   loading.value = true
   try {
+    console.log('📝 Adding manual extraction:', newExtraction.value)
+    console.log('   - MediaId:', props.mediaFile._id)
+    console.log('   - Text:', newExtraction.value.text)
+    console.log('   - Location:', newExtraction.value.x, newExtraction.value.y, newExtraction.value.width, newExtraction.value.height)
+    
     const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.ADD_MANUAL_EXTRACTION}`, {
       method: 'POST',
       headers: {
@@ -254,8 +259,8 @@ const addExtraction = async () => {
       },
       body: JSON.stringify({
         userId: userStore.userId,
-        imageId: props.mediaFile._id,  // Backend expects imageId, not mediaId
-        txt: newExtraction.value.text,  // Backend expects txt, not text
+        mediaId: props.mediaFile._id,  // Backend expects mediaId
+        text: newExtraction.value.text,  // Backend expects text
         location: {
           x: newExtraction.value.x,
           y: newExtraction.value.y,
@@ -628,6 +633,33 @@ const handleClose = () => {
               class="extraction-item"
             >
               <div class="extraction-text">{{ extraction.extractedText }}</div>
+
+              <!-- Coordinates Display Box -->
+              <div v-if="extraction.locationData && extraction.locationData.fromCoord" class="coordinates-box">
+                <div class="coordinates-header">📍 Location Coordinates:</div>
+                <div class="coordinates-display">
+                  <div class="coord-item">
+                    <span class="coord-label">Top-Left:</span>
+                    <span class="coord-value">
+                      ({{ extraction.locationData.fromCoord[0] || 0 }}, {{ extraction.locationData.fromCoord[1] || 0 }})
+                    </span>
+                  </div>
+                  <div class="coord-item">
+                    <span class="coord-label">Bottom-Right:</span>
+                    <span class="coord-value">
+                      ({{ extraction.locationData.toCoord[0] || 0 }}, {{ extraction.locationData.toCoord[1] || 0 }})
+                    </span>
+                  </div>
+                </div>
+                <button
+                  @click="editLocation(extraction)"
+                  class="btn-edit-coordinates"
+                  :disabled="loading"
+                >
+                  ✏️ Edit Coordinates
+                </button>
+              </div>
+
               <div class="extraction-meta">
                 <div class="meta-row">
                   <span class="meta-label">ID:</span>
@@ -636,18 +668,6 @@ const handleClose = () => {
                 <div class="meta-row" v-if="extraction.textId">
                   <span class="meta-label">Text ID:</span>
                   <span class="meta-value">{{ extraction.textId }}</span>
-                </div>
-                <div class="meta-row" v-if="extraction.locationData && extraction.locationData.fromCoord">
-                  <span class="meta-label">From:</span>
-                  <span class="meta-value">
-                    ({{ extraction.locationData.fromCoord[0] || 0 }}, {{ extraction.locationData.fromCoord[1] || 0 }})
-                  </span>
-                </div>
-                <div class="meta-row" v-if="extraction.locationData && extraction.locationData.toCoord">
-                  <span class="meta-label">To:</span>
-                  <span class="meta-value">
-                    ({{ extraction.locationData.toCoord[0] || 0 }}, {{ extraction.locationData.toCoord[1] || 0 }})
-                  </span>
                 </div>
               </div>
               <!-- Translations Section -->
@@ -678,13 +698,6 @@ const handleClose = () => {
               <div class="extraction-actions">
                 <button @click="editExtraction(extraction)" class="btn-edit-small">
                   ✏️ Edit Text
-                </button>
-                <button
-                  @click="editLocation(extraction)"
-                  class="btn-location-small"
-                  v-if="extraction.locationData && extraction.locationData.fromCoord"
-                >
-                  📍 Edit Location
                 </button>
                 <button
                   @click="openTranslateDialog(extraction)"
@@ -1004,9 +1017,77 @@ const handleClose = () => {
 
 .extraction-text {
   color: white;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.75rem;
   font-size: 1em;
   line-height: 1.5;
+}
+
+/* Coordinates Display Box */
+.coordinates-box {
+  background: rgba(74, 222, 128, 0.1);
+  border-left: 3px solid #4ade80;
+  border-radius: 6px;
+  padding: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.coordinates-header {
+  color: #4ade80;
+  font-weight: 600;
+  font-size: 0.85em;
+  margin-bottom: 0.5rem;
+}
+
+.coordinates-display {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.coord-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 0.5rem;
+  border-radius: 4px;
+}
+
+.coord-label {
+  color: #4ade80;
+  font-weight: 600;
+  font-size: 0.85em;
+  min-width: 100px;
+}
+
+.coord-value {
+  color: white;
+  font-family: 'Courier New', monospace;
+  font-size: 0.95em;
+  font-weight: 600;
+}
+
+.btn-edit-coordinates {
+  width: 100%;
+  background: #4ade80;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9em;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.btn-edit-coordinates:hover:not(:disabled) {
+  background: #3bc76a;
+}
+
+.btn-edit-coordinates:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .extraction-meta {
@@ -1041,11 +1122,10 @@ const handleClose = () => {
 }
 
 .btn-edit-small,
-.btn-location-small,
 .btn-translate-small,
 .btn-delete-small {
   flex: 1;
-  min-width: 90px;
+  min-width: 100px;
   padding: 0.5rem;
   border-radius: 6px;
   border: none;
@@ -1062,15 +1142,6 @@ const handleClose = () => {
 
 .btn-edit-small:hover {
   background: #535bf2;
-}
-
-.btn-location-small {
-  background: #4ade80;
-  color: white;
-}
-
-.btn-location-small:hover {
-  background: #3bc76a;
 }
 
 .btn-translate-small {
