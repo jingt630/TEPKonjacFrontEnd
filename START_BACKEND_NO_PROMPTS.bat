@@ -29,3 +29,6 @@ echo.
 
 REM Start backend with all permissions (no prompts)
 deno run --allow-all src\concept_server.ts --port 8000 --baseUrl /api
+
+
+
