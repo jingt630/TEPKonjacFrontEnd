@@ -5,9 +5,7 @@ A Vue.js frontend application for TEP Konjac - Media Management System.
 ## User Journey
 
 A user signs up and logs into the application, then uploads a manga image (e.g., a movie poster) to their personal media library, organizing it into a custom folder like "Manga Collection." They select the uploaded image and click "✏️ Edit Image" to open the Image Editor, where they use the AI-powered "🤖 Auto Extract Text" feature to automatically detect and extract Japanese text from the image, with each extraction capturing both the text content and its precise pixel coordinates on the image. The user can refine these extractions by clicking "✏️ Edit Coordinates" to adjust the bounding boxes or add additional manual extractions for any missed text. Next, they select an extraction and click "🌐 Translate" to choose Spanish as the target language, and the AI generates an accurate translation which is stored alongside the original text. Finally, the user closes the editor and clicks "🎨 Render Text" to open the Rendering Panel, where they select which text extractions to render, choose "Spanish 🇪🇸" as the display language, and click "🎨 Render Selected Text"—the system then overlays the Spanish translations onto the original image at the exact coordinates where the Japanese text appeared, creating a new rendered version with semi-transparent backgrounds for readability. The user can preview the rendered result immediately and click "💾 Download PNG" to save the translated image to their device, with all their extractions, translations, and rendered outputs securely stored in the database and isolated from other users' content.
-
-[@LinkToVideoDemoPart1](VideoDemoPart1 - Made with Clipchamp.mp4)
-[@LinkToVideoDemoPart2](VideoDemoPart2 - Made with Clipchamp.mp4)
+[@LinktoVideoDemoOnYoutube](https://youtu.be/eRIlBbxqaD0)
 
 
 ## Features
