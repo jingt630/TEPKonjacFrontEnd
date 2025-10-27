@@ -3,6 +3,7 @@ import { ref, computed, onMounted, defineProps } from 'vue'
 import { API_BASE_URL, API_ENDPOINTS } from '../config/api'
 import { useUserStore } from '../stores/userStore'
 import { renderingApi } from '../services/renderingApi'
+import CanvasRenderer from './CanvasRenderer.vue'
 
 const props = defineProps({
   mediaFile: {
@@ -20,7 +21,9 @@ const selectedLanguage = ref('en')
 const renderPreview = ref(null)
 const outputVersions = ref([])
 const selectedElements = ref([]) // Track which text elements to render
-const outputImageUrls = ref({}) // Store blob URLs for rendered images
+const outputImageUrls = ref({}) // Store blob URLs for rendered images (legacy)
+const baseImageUrl = ref('') // Base image URL for canvas rendering
+const canvasRenderers = ref({}) // Store refs to CanvasRenderer components
 const editingLocationId = ref(null) // Track which location is being edited
 const editingCoords = ref({ fromX: 0, fromY: 0, toX: 0, toY: 0 }) // Temp storage for editing
 
@@ -219,8 +222,9 @@ const buildTextElements = () => {
         x2: loc.toCoord[0],
         y2: loc.toCoord[1]
       },
-      fontSize: '16px',
-      color: '#FFFFFF'
+      fontSize: 'auto',  // Let canvas calculate size based on box dimensions
+      color: '#000000',  // Black text
+      backgroundColor: '#FFFFFF'  // White background
     }
 
     console.log('     ✅ Valid element created:', element)
@@ -262,6 +266,12 @@ const renderOutput = async () => {
     } else {
       console.log('✅ Render successful:', result)
       alert('✅ Render complete! Output created.')
+
+      // Load base image if not already loaded
+      if (!baseImageUrl.value) {
+        await loadBaseImage()
+      }
+
       await loadOutputVersions()
     }
   } catch (error) {
@@ -272,6 +282,33 @@ const renderOutput = async () => {
   }
 }
 
+// Load base image URL for canvas rendering
+const loadBaseImage = async () => {
+  try {
+    console.log('🖼️ Loading base image for canvas rendering...')
+    const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.SERVE_IMAGE}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        userId: userStore.userId,
+        mediaId: props.mediaFile._id
+      }),
+    })
+
+    if (response.ok) {
+      const blob = await response.blob()
+      baseImageUrl.value = URL.createObjectURL(blob)
+      console.log('✅ Base image loaded for canvas')
+    } else {
+      console.error('❌ Failed to load base image:', response.status)
+    }
+  } catch (error) {
+    console.error('❌ Error loading base image:', error)
+  }
+}
+
 // Load output versions
 const loadOutputVersions = async () => {
   try {
@@ -279,82 +316,39 @@ const loadOutputVersions = async () => {
     outputVersions.value = Array.isArray(outputs) ? outputs : []
     console.log('📦 Loaded outputs for this image:', outputVersions.value.length)
 
-    // Load image previews for each output
-    for (const output of outputVersions.value) {
-      const imageUrl = await loadRenderedImage(output._id)
-      if (imageUrl) {
-        outputImageUrls.value[output._id] = imageUrl
-      }
+    // Load base image for canvas rendering (only once)
+    if (!baseImageUrl.value && outputVersions.value.length > 0) {
+      await loadBaseImage()
     }
   } catch (error) {
     console.error('Error loading outputs:', error)
   }
 }
 
-// Load rendered image for preview
-const loadRenderedImage = async (outputId) => {
-  try {
-    const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.SERVE_RENDERED_IMAGE}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        userId: userStore.userId,
-        outputId: outputId
-      }),
-    })
+// Export output using canvas renderer
+const exportOutput = (outputId) => {
+  console.log('💾 Exporting output:', outputId)
+  const canvasRenderer = canvasRenderers.value[outputId]
 
-    if (response.ok) {
-      const blob = await response.blob()
-      return URL.createObjectURL(blob)
-    }
-  } catch (error) {
-    console.error('Error loading rendered image:', error)
+  if (!canvasRenderer) {
+    alert('❌ Canvas renderer not found. Please wait for the preview to load.')
+    return
   }
-  return null
+
+  try {
+    canvasRenderer.download()
+    console.log('✅ Export initiated via canvas renderer')
+  } catch (error) {
+    console.error('❌ Error exporting:', error)
+    alert('❌ Error: ' + error.message)
+  }
 }
 
-// Export output
-const exportOutput = async (outputId) => {
-  if (!confirm('Export this rendered output?')) return
-
-  loading.value = true
-  try {
-    // Download the rendered image
-    const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.SERVE_RENDERED_IMAGE}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        userId: userStore.userId,
-        outputId: outputId
-      }),
-    })
-
-    if (response.ok) {
-      const blob = await response.blob()
-      const url = URL.createObjectURL(blob)
-
-      // Create download link
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `rendered_${outputId}_${Date.now()}.png`
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      URL.revokeObjectURL(url)
-
-      alert('✅ Export successful!')
-    } else {
-      alert('❌ Export failed')
-    }
-  } catch (error) {
-    console.error('Error exporting:', error)
-    alert('❌ Error: ' + error.message)
-  } finally {
-    loading.value = false
+// Store canvas renderer ref
+const setCanvasRendererRef = (outputId, ref) => {
+  if (ref) {
+    canvasRenderers.value[outputId] = ref
+    console.log('✅ Canvas renderer ref stored for output:', outputId)
   }
 }
 
@@ -406,9 +400,9 @@ const saveEditedLocation = async (extraction) => {
       },
       body: JSON.stringify({
         userId: userStore.userId,
-        extractionResultId: extraction._id,  // Use extractionResultId, not positionId
-        newFromCoord: [parseInt(editingCoords.value.fromX), parseInt(editingCoords.value.fromY)],
-        newToCoord: [parseInt(editingCoords.value.toX), parseInt(editingCoords.value.toY)]
+        extractionId: extraction._id,  // Backend expects extractionId, not extractionResultId
+        fromCoord: [parseInt(editingCoords.value.fromX), parseInt(editingCoords.value.fromY)],  // Backend expects fromCoord
+        toCoord: [parseInt(editingCoords.value.toX), parseInt(editingCoords.value.toY)]  // Backend expects toCoord
       }),
     })
 
@@ -650,15 +644,17 @@ onMounted(() => {
             </span>
           </div>
 
-          <!-- Rendered Image Preview -->
+          <!-- Rendered Image Preview using Canvas -->
           <div class="output-preview">
-            <img
-              v-if="outputImageUrls[output._id]"
-              :src="outputImageUrls[output._id]"
-              :alt="`Rendered output ${output._id}`"
-              class="rendered-preview-img"
+            <CanvasRenderer
+              v-if="baseImageUrl"
+              :ref="(el) => setCanvasRendererRef(output._id, el)"
+              :baseImageUrl="baseImageUrl"
+              :textElements="output.renderedData.textElements"
+              :width="0"
+              :height="0"
             />
-            <div v-else class="preview-loading">Loading preview...</div>
+            <div v-else class="preview-loading">Loading base image...</div>
           </div>
 
           <div class="output-meta">

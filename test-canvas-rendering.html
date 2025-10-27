@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Canvas Rendering Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #fff;
+        }
+        h1 { color: #646cff; }
+        .test-section {
+            background: #2a2a2a;
+            border: 2px solid #646cff;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        canvas {
+            border: 2px solid #4ade80;
+            max-width: 100%;
+            display: block;
+            margin: 20px 0;
+            background: #000;
+        }
+        button {
+            background: #646cff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+        }
+        button:hover { background: #535bf2; }
+        .success { color: #4ade80; }
+        .info { color: #60a5fa; }
+        pre {
+            background: #000;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎨 Canvas Rendering Test</h1>
+
+    <div class="test-section">
+        <h2>Test Specifications</h2>
+        <pre class="info">
+Input Image: 400x400 pure red (#FF0000)
+Text: "STOP"
+Text Color: Black (#000000)
+Background: White (#FFFFFF)
+Position: (10, 10) to (110, 60)
+Box Size: 100px × 50px
+        </pre>
+    </div>
+
+    <div class="test-section">
+        <h2>Step 1: Create Base Image (400x400 Red)</h2>
+        <canvas id="baseCanvas" width="400" height="400"></canvas>
+        <button onclick="createBaseImage()">1. Create Red Image</button>
+        <div id="baseStatus"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Step 2: Add Text Overlay</h2>
+        <canvas id="renderCanvas" width="400" height="400"></canvas>
+        <button onclick="renderWithText()">2. Render "STOP" Text</button>
+        <div id="renderStatus"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Step 3: Download Result</h2>
+        <button onclick="downloadImage()">💾 Download Rendered Image</button>
+    </div>
+
+    <script>
+        let baseImageData = null;
+
+        // Step 1: Create pure red 400x400 image
+        function createBaseImage() {
+            console.log('🎨 Creating 400x400 red image...');
+
+            const canvas = document.getElementById('baseCanvas');
+            const ctx = canvas.getContext('2d');
+
+            // Fill with pure red
+            ctx.fillStyle = '#FF0000';
+            ctx.fillRect(0, 0, 400, 400);
+
+            console.log('✅ Red image created');
+
+            // Store as base64
+            baseImageData = canvas.toDataURL('image/png');
+
+            document.getElementById('baseStatus').innerHTML =
+                '<span class="success">✅ Base image created (400x400 red)</span>';
+        }
+
+        // Step 2: Render with text overlay
+        function renderWithText() {
+            console.log('🎨 Starting rendering with text...');
+
+            if (!baseImageData) {
+                alert('⚠️ Please create base image first (Step 1)');
+                return;
+            }
+
+            const canvas = document.getElementById('renderCanvas');
+            const ctx = canvas.getContext('2d');
+
+            // Load base image
+            const img = new Image();
+            img.onload = function() {
+                console.log('✅ Base image loaded');
+
+                // Draw base image
+                ctx.drawImage(img, 0, 0);
+                console.log('✅ Base image drawn on canvas');
+
+                // Text box specifications
+                const boxX = 10;
+                const boxY = 10;
+                const boxX2 = 110;
+                const boxY2 = 60;
+                const boxWidth = boxX2 - boxX;  // 100px
+                const boxHeight = boxY2 - boxY; // 50px
+
+                console.log(`📦 Text box: (${boxX}, ${boxY}) to (${boxX2}, ${boxY2})`);
+                console.log(`   Size: ${boxWidth}x${boxHeight}px`);
+
+                // Draw white background
+                ctx.fillStyle = '#FFFFFF';
+                ctx.fillRect(boxX, boxY, boxWidth, boxHeight);
+                console.log('✅ White background drawn');
+
+                // Draw border
+                ctx.strokeStyle = '#666666';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(boxX, boxY, boxWidth, boxHeight);
+                console.log('✅ Border drawn');
+
+                // Draw "STOP" text
+                ctx.fillStyle = '#000000'; // Black text
+                ctx.font = 'bold 24px Arial';
+                ctx.textBaseline = 'top';
+
+                const text = 'STOP';
+                const textMetrics = ctx.measureText(text);
+
+                // Center text in box
+                const textX = boxX + (boxWidth - textMetrics.width) / 2;
+                const textY = boxY + (boxHeight - 24) / 2; // 24 = font size
+
+                ctx.fillText(text, textX, textY);
+                console.log(`✅ Text "${text}" drawn at (${textX.toFixed(1)}, ${textY.toFixed(1)})`);
+
+                document.getElementById('renderStatus').innerHTML = `
+                    <span class="success">✅ Rendering complete!</span><br>
+                    <span class="info">
+                        • Base: 400x400 red image<br>
+                        • Text box: 100x50px white background<br>
+                        • Text: "STOP" in black, bold 24px<br>
+                        • Position: (10, 10) to (110, 60)
+                    </span>
+                `;
+            };
+
+            img.onerror = function() {
+                console.error('❌ Failed to load base image');
+                alert('❌ Failed to load base image');
+            };
+
+            img.src = baseImageData;
+        }
+
+        // Step 3: Download the rendered image
+        function downloadImage() {
+            const canvas = document.getElementById('renderCanvas');
+
+            // Check if anything is drawn
+            const ctx = canvas.getContext('2d');
+            const imageData = ctx.getImageData(0, 0, 1, 1);
+            if (imageData.data[0] === 0 && imageData.data[1] === 0 && imageData.data[2] === 0) {
+                alert('⚠️ Please render the image first (Step 2)');
+                return;
+            }
+
+            canvas.toBlob(function(blob) {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `test-rendered-stop-${Date.now()}.png`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+
+                console.log('✅ Download initiated');
+                alert('✅ Download started! Check your downloads folder.');
+            }, 'image/png');
+        }
+
+        // Auto-run the test
+        window.addEventListener('load', function() {
+            console.log('🚀 Page loaded, running auto-test...');
+
+            // Create base image
+            createBaseImage();
+
+            // Render with text after a short delay
+            setTimeout(function() {
+                renderWithText();
+            }, 500);
+        });
+    </script>
+</body>
+</html>

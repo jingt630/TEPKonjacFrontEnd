@@ -416,9 +416,9 @@ const saveCoordinates = async (extraction) => {
       },
       body: JSON.stringify({
         userId: userStore.userId,
-        extractionResultId: extraction._id,
-        newFromCoord: [parseInt(coords.fromX), parseInt(coords.fromY)],
-        newToCoord: [parseInt(coords.toX), parseInt(coords.toY)]
+        extractionId: extraction._id,  // Backend expects extractionId, not extractionResultId
+        fromCoord: [parseInt(coords.fromX), parseInt(coords.fromY)],  // Backend expects fromCoord
+        toCoord: [parseInt(coords.toX), parseInt(coords.toY)]  // Backend expects toCoord
       }),
     })
 

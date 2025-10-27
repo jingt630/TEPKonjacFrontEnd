@@ -33,6 +33,9 @@ export const API_ENDPOINTS = {
   GET_TRANSLATIONS_BY_ORIGINAL: '/Translation/_getTranslationsByOriginalTextId',
 
   // ========== Rendering Concept ==========
+  // Note: Change 'OutputRender' to match your backend folder name
+  // If backend folder is 'Rendering/', use '/Rendering/render'
+  // If backend folder is 'OutputRender/', use '/OutputRender/render'
   RENDER_OUTPUT: '/Rendering/render',
   EXPORT_OUTPUT: '/Rendering/export',
   GET_OUTPUT_BY_ID: '/Rendering/_getOutputVersionById',

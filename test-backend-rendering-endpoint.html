@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Backend Rendering Endpoints</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #fff;
+        }
+        h1 { color: #646cff; }
+        .test-section {
+            background: #2a2a2a;
+            border: 2px solid #646cff;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        button {
+            background: #646cff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+        }
+        button:hover { background: #535bf2; }
+        .result {
+            background: #000;
+            border: 1px solid #444;
+            border-radius: 4px;
+            padding: 15px;
+            margin-top: 15px;
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .success { color: #4ade80; }
+        .error { color: #ff6b6b; }
+        .warning { color: #fbbf24; }
+        .info { color: #60a5fa; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Backend Rendering Endpoint Tester</h1>
+
+    <div class="test-section">
+        <h2>Step 1: Test Common Endpoint Names</h2>
+        <p>Click each button to test if that endpoint exists on your backend:</p>
+
+        <button onclick="testEndpoint('/api/Rendering/render')">Test /api/Rendering/render</button>
+        <button onclick="testEndpoint('/api/OutputRender/render')">Test /api/OutputRender/render</button>
+        <button onclick="testEndpoint('/api/Render/render')">Test /api/Render/render</button>
+
+        <div id="endpoint-results" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Step 2: List All Backend Endpoints</h2>
+        <p>This will attempt to discover what endpoints your backend actually has:</p>
+
+        <button onclick="scanAllEndpoints()">Scan for Rendering Endpoints</button>
+
+        <div id="scan-results" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Step 3: Test Full Render Call</h2>
+        <p>Once you find the correct endpoint, test a full render call:</p>
+
+        <label>
+            Endpoint path:
+            <input type="text" id="custom-endpoint" value="/api/Rendering/render"
+                   style="width: 300px; padding: 5px; background: #000; color: #fff; border: 1px solid #646cff;">
+        </label>
+        <br><br>
+        <label>
+            User ID:
+            <input type="text" id="user-id" value="user:test"
+                   style="width: 200px; padding: 5px; background: #000; color: #fff; border: 1px solid #646cff;">
+        </label>
+        <br><br>
+        <label>
+            Media ID:
+            <input type="text" id="media-id" value="test-media-id"
+                   style="width: 200px; padding: 5px; background: #000; color: #fff; border: 1px solid #646cff;">
+        </label>
+        <br><br>
+
+        <button onclick="testFullRender()">Test Full Render Call</button>
+
+        <div id="render-results" class="result"></div>
+    </div>
+
+    <script>
+        const BASE_URL = 'http://localhost:8000';
+
+        function log(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            const className = type;
+            const timestamp = new Date().toLocaleTimeString();
+            element.innerHTML += `<span class="${className}">[${timestamp}] ${message}</span>\n`;
+            element.scrollTop = element.scrollHeight;
+        }
+
+        function clearLog(elementId) {
+            document.getElementById(elementId).innerHTML = '';
+        }
+
+        async function testEndpoint(path) {
+            clearLog('endpoint-results');
+            log('endpoint-results', `🔍 Testing: ${BASE_URL}${path}`, 'info');
+
+            try {
+                const response = await fetch(`${BASE_URL}${path}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({})
+                });
+
+                log('endpoint-results', `   Status: ${response.status} ${response.statusText}`,
+                    response.ok ? 'success' : 'warning');
+
+                if (response.status === 404) {
+                    log('endpoint-results', '   ❌ Endpoint does not exist (404)', 'error');
+                    log('endpoint-results', '   💡 Try a different endpoint name', 'warning');
+                } else {
+                    log('endpoint-results', `   ✅ Endpoint exists! (Status: ${response.status})`, 'success');
+
+                    const contentType = response.headers.get('content-type');
+                    if (contentType && contentType.includes('application/json')) {
+                        const data = await response.json();
+                        log('endpoint-results', `   Response: ${JSON.stringify(data, null, 2)}`, 'info');
+                    } else {
+                        const text = await response.text();
+                        log('endpoint-results', `   Response: ${text.substring(0, 200)}`, 'info');
+                    }
+
+                    log('endpoint-results', '\n   ✨ USE THIS ENDPOINT IN YOUR API CONFIG! ✨', 'success');
+                }
+            } catch (error) {
+                log('endpoint-results', `   ❌ Error: ${error.message}`, 'error');
+                if (error.message.includes('Failed to fetch')) {
+                    log('endpoint-results', '   💡 Make sure backend is running on http://localhost:8000', 'warning');
+                }
+            }
+        }
+
+        async function scanAllEndpoints() {
+            clearLog('scan-results');
+            log('scan-results', '🔍 Scanning for rendering endpoints...', 'info');
+            log('scan-results', '   This may take a moment...', 'info');
+
+            const possibleNames = [
+                'Rendering',
+                'OutputRender',
+                'Render',
+                'RenderOutput',
+                'OutputRendering',
+                'ImageRender',
+                'ImageRendering',
+                'RenderImage',
+                'TextRender',
+                'TextRendering'
+            ];
+
+            let found = false;
+
+            for (const name of possibleNames) {
+                const path = `/api/${name}/render`;
+
+                try {
+                    const response = await fetch(`${BASE_URL}${path}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({})
+                    });
+
+                    if (response.status !== 404) {
+                        log('scan-results', `\n✅ FOUND: ${path}`, 'success');
+                        log('scan-results', `   Status: ${response.status} ${response.statusText}`, 'success');
+                        log('scan-results', `   👉 Update your api.js to use: '/${name}/render'`, 'success');
+                        found = true;
+                    }
+                } catch (error) {
+                    // Continue scanning
+                }
+            }
+
+            if (!found) {
+                log('scan-results', '\n❌ No rendering endpoints found!', 'error');
+                log('scan-results', '\n💡 This means:', 'warning');
+                log('scan-results', '   1. Backend might not be running', 'warning');
+                log('scan-results', '   2. Backend might not have the Rendering concept', 'warning');
+                log('scan-results', '   3. Backend folder might have an unusual name', 'warning');
+                log('scan-results', '\n🔧 Solutions:', 'info');
+                log('scan-results', '   1. Check backend terminal logs for "Registering concept:"', 'info');
+                log('scan-results', '   2. Look for the folder name in backend/src/concepts/', 'info');
+                log('scan-results', '   3. Copy Rendering.ts to backend if missing', 'info');
+            }
+        }
+
+        async function testFullRender() {
+            clearLog('render-results');
+
+            const endpoint = document.getElementById('custom-endpoint').value;
+            const userId = document.getElementById('user-id').value;
+            const mediaId = document.getElementById('media-id').value;
+
+            log('render-results', `🎨 Testing full render call...`, 'info');
+            log('render-results', `   Endpoint: ${BASE_URL}${endpoint}`, 'info');
+            log('render-results', `   User ID: ${userId}`, 'info');
+            log('render-results', `   Media ID: ${mediaId}`, 'info');
+
+            const payload = {
+                userId: userId,
+                imagePath: mediaId,
+                contentToRender: {
+                    textElements: [
+                        {
+                            text: "Test Text",
+                            position: { x: 10, y: 10, x2: 100, y2: 50 },
+                            fontSize: "16px",
+                            color: "#FFFFFF"
+                        }
+                    ]
+                }
+            };
+
+            log('render-results', `\n   Payload: ${JSON.stringify(payload, null, 2)}`, 'info');
+
+            try {
+                const response = await fetch(`${BASE_URL}${endpoint}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                log('render-results', `\n   Response Status: ${response.status} ${response.statusText}`,
+                    response.ok ? 'success' : 'error');
+
+                const data = await response.json();
+                log('render-results', `   Response Data: ${JSON.stringify(data, null, 2)}`,
+                    response.ok ? 'success' : 'error');
+
+                if (response.ok && data.output) {
+                    log('render-results', '\n   ✅ RENDER SUCCESSFUL!', 'success');
+                    log('render-results', `   Output ID: ${data.output._id}`, 'success');
+                } else if (data.error) {
+                    log('render-results', `\n   ❌ Error: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                log('render-results', `\n   ❌ Error: ${error.message}`, 'error');
+            }
+        }
+
+        // Auto-test on load
+        window.addEventListener('load', () => {
+            log('endpoint-results', '👋 Ready to test! Click a button above to start.', 'info');
+            log('scan-results', '👋 Click "Scan for Rendering Endpoints" to auto-discover.', 'info');
+            log('render-results', '👋 First find the correct endpoint, then test here.', 'info');
+        });
+    </script>
+</body>
+</html>
