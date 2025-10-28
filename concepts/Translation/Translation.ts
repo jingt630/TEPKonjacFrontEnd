@@ -25,10 +25,12 @@ interface Translations {
 
 export default class TranslationConcept {
   translations: Collection<Translations>;
+  mediaFiles: Collection<any>; // Reference to MediaManagement collection
   private readonly geminiLLM: GeminiLLM;
 
   constructor(private readonly db: Db) {
     this.translations = this.db.collection(PREFIX + "translations");
+    this.mediaFiles = this.db.collection("MediaManagement.mediaFiles");
     this.geminiLLM = new GeminiLLM();
   }
 
@@ -94,6 +96,13 @@ Translation:`;
 
       await this.translations.insertOne(newTranslation);
       console.log(`✅ Translation stored in database: ${transTextId}`);
+
+      // Update the media file's updateDate
+      await this.mediaFiles.updateOne(
+        { _id: imagePath },
+        { $set: { updateDate: new Date() } }
+      );
+      console.log(`✅ Updated media file updateDate`);
 
       return { translation: transTextId, translatedText: translatedText.trim() };
     } catch (error) {

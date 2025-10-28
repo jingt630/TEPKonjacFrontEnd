@@ -149,14 +149,22 @@ export default class MediaManagementConcept {
 
     // Also store image data in database for preview
     if (fileData) {
+      console.log(`💾 Attempting to store image in database...`);
       const mimeType = `image/${mediaType}`;
-      await this.mediaStorage.storeImage({
+      const storeResult = await this.mediaStorage.storeImage({
         userId,
         mediaId: newMediaFile._id,
         imageData: fileData,
         mimeType,
       });
-      console.log(`✅ Image data stored in database for preview`);
+
+      if ('error' in storeResult) {
+        console.error(`❌ Failed to store image in database: ${storeResult.error}`);
+      } else {
+        console.log(`✅ Image data stored in database for preview (${storeResult.size} bytes)`);
+      }
+    } else {
+      console.warn(`⚠️ No fileData provided - image NOT stored in database!`);
     }
 
     return newMediaFile;

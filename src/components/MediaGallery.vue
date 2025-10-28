@@ -94,44 +94,58 @@ const toggleUpload = () => {
 
 <style scoped>
 .media-gallery {
-  padding: 1rem;
+  padding: 2rem;
 }
 
 .gallery-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1.5rem;
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid var(--soft-blue);
 }
 
 h2 {
   margin: 0;
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--primary-blue);
 }
 
 .btn-upload-toggle {
-  background: #4ade80;
+  background: var(--primary-blue);
+  color: white;
+  border: none;
 }
 
 .btn-upload-toggle:hover {
-  background: #3bc76a;
+  background: var(--navy-blue);
+  transform: translateY(-2px);
 }
 
 .upload-section {
   margin-bottom: 2rem;
-  padding: 1rem;
-  background: rgba(100, 108, 255, 0.05);
-  border-radius: 12px;
+  padding: 1.5rem;
+  background: var(--soft-blue);
+  border-radius: 16px;
+  border: 2px solid var(--primary-blue);
 }
 
 .gallery-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 1.5rem;
 }
 
 .empty {
   text-align: center;
-  color: #888;
+  color: var(--navy-blue);
   padding: 3rem;
+  font-size: 1.1em;
+  font-weight: 600;
+  background: var(--light-gray);
+  border-radius: 16px;
+  border: 2px dashed var(--primary-blue);
 }
 </style>

@@ -1,15 +1,19 @@
 # TEP Konjac Frontend
 
-A Vue.js frontend application for TEP Konjac - Media Management System.
+A Vue.js frontend application for TEP Konjac - Media Management & Translation System.
 
-## User Journey
+## 🎯 Quick Links
 
-A user signs up and logs into the application, then uploads a manga image (e.g., a movie poster) to their personal media library, organizing it into a custom folder like "Manga Collection." They select the uploaded image and click "✏️ Edit Image" to open the Image Editor, where they use the AI-powered "🤖 Auto Extract Text" feature to automatically detect and extract Japanese text from the image, with each extraction capturing both the text content and its precise pixel coordinates on the image. The user can refine these extractions by clicking "✏️ Edit Coordinates" to adjust the bounding boxes or add additional manual extractions for any missed text. Next, they select an extraction and click "🌐 Translate" to choose Spanish as the target language, and the AI generates an accurate translation which is stored alongside the original text. Finally, the user closes the editor and clicks "🎨 Render Text" to open the Rendering Panel, where they select which text extractions to render, choose "Spanish 🇪🇸" as the display language, and click "🎨 Render Selected Text"—the system then overlays the Spanish translations onto the original image at the exact coordinates where the Japanese text appeared, creating a new rendered version with semi-transparent backgrounds for readability. The user can preview the rendered result immediately and click "💾 Download PNG" to save the translated image to their device, with all their extractions, translations, and rendered outputs securely stored in the database and isolated from other users' content.
-[@LinktoVideoDemoOnYoutube](https://youtu.be/eRIlBbxqaD0)
+- **[📖 Complete User Journey Guide](USER_JOURNEY.md)** - Detailed step-by-step walkthrough (optional reference)
+- **[🎥 Video Demo on YouTube](https://youtu.be/eRIlBbxqaD0)** - Watch the system in action for the final 4b
+
+## 🚀 User Journey Example
+
+A user creates a new account and signs up for TEP Konjac, then creates a folder called "Chiikawa" to organize their work. They upload a Chiikawa related event image by dragging it into the upload area. After selecting the uploaded image, they click "✏️ Edit Image" and use the "🤖 Extract Text with AI" button to automatically detect all the Chinese text in the image, which successfully extracts some text elements with their pixel coordinates. The user then clicks "🌐 Translate" on each extracted text element, selecting English as the target language, and the AI generates accurate translations that appear below each original text. Satisfied with the translations, they close the editor and click "🎨 Render Text" to preview the result, selecting English as the display language. However, after rendering, they notice that two text boxes are slightly misaligned and overlapping with character faces in the image. They click "📍 Edit Location" on these problematic elements within the Rendering Panel's side-by-side view, adjusting the X and Y coordinates by small increments while watching the preview update in real-time until the text boxes are perfectly positioned. Once satisfied with the positioning, they click "🎨 Render Image" again to generate the final version, which now shows the English translations beautifully overlaid on white text boxes at the exact desired locations. They right-click the rendered preview and save the translated manga panel to their computer, with all their work—extractions, translations, and render output—securely stored in their personal database for future reference or re-rendering with different languages.
 
 ## Visual Study Design
 
-[@DoraemonInspired](stand-by-me-doraemon.jpg)
+[@VisualDesignStudy](VisualDesignStudy.pdf)
 
 ## Features
 

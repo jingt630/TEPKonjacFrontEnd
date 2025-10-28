@@ -111,36 +111,49 @@ const handleBreadcrumbClick = (path) => {
 
 <style scoped>
 .folder-browser {
-  padding: 1rem;
+  padding: 2rem;
 }
 
 .header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1rem;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid var(--soft-blue);
+}
+
+.header h2 {
+  margin: 0;
+  color: var(--primary-blue);
+  font-size: 1.6em;
+  font-weight: 700;
 }
 
 .btn-new-folder {
-  background: #646cff;
+  background: var(--primary-blue);
   color: white;
   border: none;
-  padding: 0.5rem 1rem;
-  border-radius: 6px;
+  padding: 0.6rem 1.3rem;
+  border-radius: 50px;
   cursor: pointer;
-  font-size: 0.9em;
+  font-size: 0.95em;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(37, 150, 190, 0.2);
 }
 
 .btn-new-folder:hover {
-  background: #535bf2;
+  background: var(--navy-blue);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(5, 100, 177, 0.3);
 }
 
 .breadcrumb {
-  background: rgba(255, 255, 255, 0.05);
-  padding: 0.75rem;
-  border-radius: 6px;
+  background: var(--soft-blue);
+  padding: 0.75rem 1rem;
+  border-radius: 50px;
   margin-bottom: 1rem;
-  font-size: 0.9em;
+  font-size: 0.95em;
 }
 
 .breadcrumb-segment {
@@ -148,41 +161,45 @@ const handleBreadcrumbClick = (path) => {
 }
 
 .breadcrumb-link {
-  color: #646cff;
+  color: var(--primary-blue);
   cursor: pointer;
-  text-decoration: underline;
+  text-decoration: none;
+  font-weight: 600;
 }
 
 .breadcrumb-link:hover {
-  color: #535bf2;
+  color: var(--navy-blue);
+  text-decoration: underline;
 }
 
 .breadcrumb-current {
-  color: #fff;
-  font-weight: bold;
+  color: var(--navy-blue);
+  font-weight: 700;
 }
 
 .breadcrumb-separator {
-  color: #666;
+  color: var(--accent-dark);
+  opacity: 0.5;
   margin: 0 0.5rem;
 }
 
 .btn-back {
   width: 100%;
-  padding: 0.75rem;
+  padding: 0.85rem;
   margin-bottom: 1rem;
-  background: rgba(100, 108, 255, 0.2);
-  border: 1px solid #646cff;
-  color: #646cff;
-  border-radius: 6px;
+  background: var(--soft-blue);
+  border: 2px solid var(--primary-blue);
+  color: var(--primary-blue);
+  border-radius: 50px;
   cursor: pointer;
-  font-weight: 500;
+  font-weight: 600;
+  font-size: 0.95em;
+  transition: all 0.3s;
 }
 
 .btn-back:hover {
-  background: rgba(100, 108, 255, 0.3);
-  border-color: #535bf2;
-  color: #535bf2;
+  background: var(--primary-blue);
+  color: white;
 }
 
 .folder-list {
@@ -191,22 +208,29 @@ const handleBreadcrumbClick = (path) => {
 }
 
 .folder-item {
-  padding: 0.75rem;
+  padding: 0.9rem;
   margin-bottom: 0.5rem;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 4px;
+  background: var(--white);
+  border-radius: 12px;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.3s;
+  font-size: 1em;
+  border: 2px solid var(--soft-blue);
 }
 
 .folder-item:hover {
-  background: rgba(255, 255, 255, 0.1);
-  transform: translateX(4px);
+  background: var(--soft-blue);
+  border-color: var(--primary-blue);
+  transform: translateX(6px);
 }
 
 .empty {
   text-align: center;
-  color: #888;
+  color: var(--navy-blue);
   padding: 2rem;
+  font-size: 1em;
+  background: var(--light-gray);
+  border-radius: 12px;
+  border: 2px dashed var(--primary-blue);
 }
 </style>

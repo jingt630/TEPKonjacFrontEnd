@@ -72,87 +72,104 @@ const handleRenderImage = () => {
           <dd>{{ mediaFile.cloudURL || 'N/A' }}</dd>
         </dl>
       </div>
-
-      <div class="detail-section">
-        <h3>Extracted Context</h3>
-        <pre v-if="mediaFile.context">{{ JSON.stringify(mediaFile.context, null, 2) }}</pre>
-        <p v-else class="empty">No context available</p>
-        <p class="note">Auto-updated by text extraction system</p>
-      </div>
-
-      <div class="detail-section">
-        <h3>Translations</h3>
-        <pre v-if="mediaFile.translatedText">{{ JSON.stringify(mediaFile.translatedText, null, 2) }}</pre>
-        <p v-else class="empty">No translations available</p>
-        <p class="note">Auto-updated after translation processing</p>
-      </div>
     </div>
   </div>
 </template>
 
 <style scoped>
 .media-details {
-  padding: 1rem;
-  background: rgba(255, 255, 255, 0.03);
-  border-radius: 8px;
-  min-height: 400px;
+  padding: 2rem;
+  background: transparent;
+  border-radius: 16px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
 }
 
 .no-selection {
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 400px;
-  color: #888;
+  flex: 1;
+  color: var(--navy-blue);
+  font-size: 1.2em;
+  font-weight: 600;
+  background: var(--light-gray);
+  border-radius: 16px;
+  padding: 3rem;
+  border: 2px dashed var(--primary-blue);
+}
+
+.details-content {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow-y: auto;
 }
 
 .header-section {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column;
+  gap: 1.2rem;
   margin-bottom: 1.5rem;
-  border-bottom: 2px solid #646cff;
-  padding-bottom: 0.5rem;
+  border-bottom: 2px solid var(--soft-blue);
+  padding: 1.5rem;
+  flex-shrink: 0;
+  background: var(--white);
+  border-radius: 16px;
 }
 
 .header-section h2 {
   margin: 0;
+  font-size: 1.6em;
+  word-break: break-word;
+  line-height: 1.3;
+  color: var(--primary-blue);
+  font-weight: 700;
 }
 
 .action-buttons {
   display: flex;
   gap: 0.75rem;
+  flex-shrink: 0;
+  flex-wrap: nowrap;
+  justify-content: flex-start;
 }
 
 .btn-edit-image,
 .btn-render-image {
-  background: #646cff;
+  background: var(--primary-blue);
   color: white;
   border: none;
-  padding: 0.75rem 1.5rem;
-  border-radius: 8px;
+  padding: 0.85rem 1.5rem;
+  border-radius: 50px;
   cursor: pointer;
   font-size: 1em;
   font-weight: 600;
-  transition: all 0.2s;
-  box-shadow: 0 2px 8px rgba(100, 108, 255, 0.3);
+  transition: all 0.3s;
+  box-shadow: 0 2px 8px rgba(37, 150, 190, 0.2);
+  white-space: nowrap;
+  flex: 1;
+  max-width: 200px;
 }
 
 .btn-edit-image:hover,
 .btn-render-image:hover {
-  background: #535bf2;
+  background: var(--navy-blue);
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(100, 108, 255, 0.5);
+  box-shadow: 0 4px 12px rgba(5, 100, 177, 0.3);
 }
 
 .btn-render-image {
-  background: linear-gradient(135deg, #f59e0b, #d97706);
-  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
+  background: var(--accent-yellow);
+  color: var(--accent-dark);
 }
 
 .btn-render-image:hover {
-  background: linear-gradient(135deg, #d97706, #b45309);
-  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.5);
+  background: var(--accent-light-green);
+  color: var(--accent-dark);
+  transform: translateY(-2px);
 }
 
 .btn-edit-image:active,
@@ -161,46 +178,35 @@ const handleRenderImage = () => {
 }
 
 .detail-section {
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
+  background: var(--white);
+  padding: 1.5rem;
+  border-radius: 16px;
+  border: 2px solid var(--soft-blue);
 }
 
 .detail-section h3 {
-  margin: 0 0 0.75rem 0;
-  color: #646cff;
+  margin: 0 0 1rem 0;
+  color: var(--navy-blue);
+  font-size: 1.2em;
+  font-weight: 700;
 }
 
 dl {
   display: grid;
   grid-template-columns: auto 1fr;
-  gap: 0.5rem 1rem;
+  gap: 0.75rem 1.5rem;
+  font-size: 1em;
 }
 
 dt {
-  font-weight: bold;
-  color: #888;
+  font-weight: 600;
+  color: var(--primary-blue);
 }
 
 dd {
   margin: 0;
-}
-
-pre {
-  background: rgba(0, 0, 0, 0.3);
-  padding: 1rem;
-  border-radius: 4px;
-  overflow-x: auto;
-  font-size: 0.9em;
-}
-
-.empty {
-  color: #666;
-  font-style: italic;
-}
-
-.note {
-  margin-top: 0.5rem;
-  font-size: 0.85em;
-  color: #888;
-  font-style: italic;
+  color: var(--accent-dark);
+  font-weight: 500;
 }
 </style>

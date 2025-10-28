@@ -149,76 +149,85 @@ const triggerFileInput = () => {
 
 h3 {
   margin: 0 0 1rem 0;
-  color: #646cff;
+  color: var(--primary-blue);
+  font-weight: 700;
 }
 
 .upload-area {
-  border: 2px dashed #646cff;
-  border-radius: 12px;
+  border: 2px dashed var(--primary-blue);
+  border-radius: 16px;
   padding: 3rem 2rem;
   text-align: center;
   cursor: pointer;
   transition: all 0.3s;
-  background: rgba(100, 108, 255, 0.05);
+  background: var(--soft-blue);
 }
 
 .upload-area:hover {
-  border-color: #535bf2;
-  background: rgba(100, 108, 255, 0.1);
+  border-color: var(--navy-blue);
+  background: var(--primary-blue);
+  background-opacity: 0.1;
   transform: translateY(-2px);
 }
 
 .upload-icon {
   font-size: 4em;
   margin-bottom: 1rem;
+  filter: hue-rotate(180deg);
 }
 
 .upload-text {
-  margin: 0 0 0.5rem 0;
-  font-size: 1.1em;
-  font-weight: 500;
-  color: #fff;
+  margin: 0 0 0.75rem 0;
+  font-size: 1.2em;
+  font-weight: 600;
+  color: var(--navy-blue);
 }
 
 .upload-hint {
   margin: 0;
-  font-size: 0.9em;
-  color: #888;
+  font-size: 1em;
+  color: var(--accent-dark);
+  opacity: 0.7;
 }
 
 .preview-area {
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: 12px;
-  padding: 1.5rem;
+  background: var(--light-gray);
+  border-radius: 16px;
+  padding: 2rem;
+  border: 2px solid var(--soft-blue);
 }
 
 .preview-image {
   width: 100%;
-  max-height: 300px;
+  max-height: 400px;
   object-fit: contain;
-  border-radius: 8px;
-  margin-bottom: 1rem;
-  background: rgba(0, 0, 0, 0.3);
+  border-radius: 12px;
+  margin-bottom: 1.5rem;
+  background: var(--white);
+  border: 1px solid var(--soft-blue);
 }
 
 .file-info {
-  margin-bottom: 1rem;
-  padding: 0.75rem;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 6px;
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background: var(--white);
+  border-radius: 12px;
+  border: 2px solid var(--soft-blue);
 }
 
 .filename {
-  margin: 0 0 0.25rem 0;
-  font-weight: 500;
-  color: #fff;
+  margin: 0 0 0.5rem 0;
+  font-weight: 600;
+  color: var(--navy-blue);
   word-break: break-all;
+  font-size: 1.1em;
 }
 
 .filesize {
   margin: 0;
-  font-size: 0.9em;
-  color: #888;
+  font-size: 0.95em;
+  color: var(--accent-dark);
+  opacity: 0.7;
 }
 
 .upload-actions {
@@ -228,22 +237,25 @@ h3 {
 
 .upload-actions button {
   flex: 1;
-  padding: 0.75rem;
+  padding: 0.85rem;
+  font-size: 1em;
 }
 
 .btn-upload {
-  background: #4ade80;
+  background: var(--accent-light-green);
+  color: var(--accent-dark);
 }
 
 .btn-upload:hover:not(:disabled) {
-  background: #3bc76a;
+  background: var(--accent-yellow);
+  color: var(--accent-dark);
 }
 
 .btn-cancel {
-  background: #666;
+  background: var(--accent-red);
 }
 
 .btn-cancel:hover:not(:disabled) {
-  background: #555;
+  background: #a00e16;
 }
 </style>

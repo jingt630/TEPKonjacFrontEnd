@@ -211,39 +211,50 @@ const handleImageError = (event) => {
 
 <style scoped>
 .media-card {
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 8px;
-  padding: 1rem;
+  background: var(--white);
+  border-radius: 16px;
+  padding: 1.5rem;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.3s;
+  border: 2px solid var(--soft-blue);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
 .media-card:hover {
-  background: rgba(255, 255, 255, 0.1);
-  transform: translateY(-2px);
+  background: var(--soft-blue);
+  transform: translateY(-4px);
+  box-shadow: 0 8px 20px rgba(37, 150, 190, 0.15);
+  border-color: var(--primary-blue);
 }
 
 .media-card.selected {
-  border: 2px solid #646cff;
-  background: rgba(100, 108, 255, 0.1);
+  border: 3px solid var(--primary-blue);
+  background: var(--soft-blue);
+  box-shadow: 0 6px 16px rgba(37, 150, 190, 0.25);
 }
 
 .media-thumbnail {
   width: 100%;
-  height: 150px;
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: 4px;
+  height: 250px;
+  background: var(--light-gray);
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 0.75rem;
+  margin-bottom: 1rem;
   overflow: hidden;
+  border: 1px solid var(--soft-blue);
 }
 
 .media-thumbnail img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  transition: transform 0.3s;
+}
+
+.media-card:hover .media-thumbnail img {
+  transform: scale(1.05);
 }
 
 .placeholder {
@@ -255,52 +266,59 @@ const handleImageError = (event) => {
 }
 
 .placeholder .icon {
-  font-size: 3em;
+  font-size: 4em;
 }
 
 .placeholder .type-label {
-  font-size: 0.9em;
+  font-size: 1.1em;
   color: #888;
   font-weight: 500;
 }
 
 .media-info h3 {
-  margin: 0 0 0.5rem 0;
-  font-size: 1em;
+  margin: 0 0 0.75rem 0;
+  font-size: 1.2em;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  color: var(--navy-blue);
+  font-weight: 700;
 }
 
 .media-type {
-  color: #888;
-  font-size: 0.9em;
-  margin: 0.25rem 0;
+  color: var(--primary-blue);
+  font-size: 0.95em;
+  margin: 0.35rem 0;
+  font-weight: 600;
+  text-transform: uppercase;
 }
 
 .upload-date {
-  color: #666;
-  font-size: 0.8em;
-  margin: 0.25rem 0;
+  color: var(--accent-dark);
+  font-size: 0.9em;
+  margin: 0.35rem 0;
+  font-weight: 500;
+  opacity: 0.7;
 }
 
 .media-actions {
   display: flex;
-  gap: 0.5rem;
-  margin-top: 0.75rem;
+  gap: 0.75rem;
+  margin-top: 1rem;
 }
 
 .media-actions button {
   flex: 1;
-  padding: 0.5rem;
-  font-size: 0.85em;
+  padding: 0.65rem;
+  font-size: 0.95em;
 }
 
 .btn-delete {
-  background-color: #ff6b6b;
+  background-color: var(--accent-red);
 }
 
 .btn-delete:hover {
-  background-color: #ee5a52;
+  background-color: #a00e16;
+  transform: translateY(-2px);
 }
 </style>

@@ -181,21 +181,38 @@ const translateExtraction = async () => {
       }),
     })
 
+    // Get response text first
+    const responseText = await response.text()
+    console.log('📥 Raw response:', responseText)
+
     if (response.ok) {
-      const result = await response.json()
-      console.log('✅ Translation result:', result)
+      try {
+        const result = JSON.parse(responseText)
+        console.log('✅ Translation result:', result)
 
-      alert(`✅ Translation created!\n\nOriginal: ${translatingExtraction.value.extractedText}\n\nTranslated (${selectedLanguage.value}): ${result.translatedText}`)
+        alert(`✅ Translation created!\n\nOriginal: ${translatingExtraction.value.extractedText}\n\nTranslated (${selectedLanguage.value}): ${result.translatedText}`)
 
-      showTranslateDialog.value = false
+        showTranslateDialog.value = false
 
-      // Force complete reload to ensure translations display
-      console.log('🔄 Reloading all extractions to show new translation...')
-      await loadExtractions()
-      console.log('✅ Extractions reloaded, translation should now be visible')
+        // Force complete reload to ensure translations display
+        console.log('🔄 Reloading all extractions to show new translation...')
+        await loadExtractions()
+        console.log('✅ Extractions reloaded, translation should now be visible')
+      } catch (parseError) {
+        console.error('❌ Failed to parse success response:', parseError)
+        console.error('Response text was:', responseText)
+        alert('❌ Translation may have succeeded but response parsing failed. Try refreshing.')
+        await loadExtractions()
+      }
     } else {
-      const error = await response.json()
-      alert('❌ Translation failed: ' + (error.error || 'Unknown error'))
+      try {
+        const error = JSON.parse(responseText)
+        alert('❌ Translation failed: ' + (error.error || 'Unknown error'))
+      } catch (parseError) {
+        console.error('❌ Failed to parse error response:', parseError)
+        console.error('Response text was:', responseText)
+        alert('❌ Translation failed. Raw response: ' + responseText.substring(0, 200))
+      }
     }
   } catch (error) {
     console.error('Error translating:', error)
@@ -214,6 +231,7 @@ const loadTranslationsForExtraction = async (extraction) => {
     }
 
     console.log('🔍 Loading translations for textId:', extraction.textId)
+    console.log('📍 Calling endpoint:', `${API_BASE_URL}${API_ENDPOINTS.GET_TRANSLATIONS_BY_ORIGINAL}`)
 
     const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.GET_TRANSLATIONS_BY_ORIGINAL}`, {
       method: 'POST',
@@ -244,7 +262,10 @@ const loadTranslationsForExtraction = async (extraction) => {
       }
     } else {
       const errorText = await response.text()
-      console.error('❌ Failed to load translations:', response.status, errorText)
+      console.warn('⚠️ Could not load translations (non-fatal):', response.status, errorText)
+      console.warn('   Endpoint:', `${API_BASE_URL}${API_ENDPOINTS.GET_TRANSLATIONS_BY_ORIGINAL}`)
+      console.warn('   This may mean the backend is not running or the endpoint path is wrong')
+      // Don't throw - just continue without translations
     }
   } catch (error) {
     console.error('❌ Error loading translations:', error)
@@ -474,6 +495,65 @@ const deleteExtraction = async (extraction) => {
   }
 }
 
+// Edit translation
+const editTranslation = async (extraction, languageCode, currentText) => {
+  const languageName = availableLanguages.find(l => l.code === languageCode)?.name || languageCode
+  const newText = prompt(`Edit ${languageName} translation:`, currentText)
+  if (!newText || newText === currentText) return
+
+  loading.value = true
+  try {
+    console.log(`✏️ Updating ${languageName} translation from "${currentText}" to "${newText}"`)
+
+    // Re-create the translation with new text
+    const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.CREATE_TRANSLATION}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        userId: userStore.userId,
+        imagePath: props.mediaFile._id,
+        originalTextId: extraction.textId,
+        originalText: extraction.extractedText,
+        targetLanguage: languageCode
+      }),
+    })
+
+    // Get response text first
+    const responseText = await response.text()
+    console.log('📥 Raw response:', responseText)
+
+    if (response.ok) {
+      try {
+        const result = JSON.parse(responseText)
+        console.log('✅ Translation updated:', result)
+        alert(`✅ ${languageName} translation updated!`)
+        await loadExtractions()
+      } catch (parseError) {
+        console.error('❌ Failed to parse response:', parseError)
+        console.error('Response text was:', responseText)
+        alert(`✅ ${languageName} translation may have updated. Refreshing...`)
+        await loadExtractions()
+      }
+    } else {
+      try {
+        const error = JSON.parse(responseText)
+        alert(`❌ Failed to update ${languageName} translation: ` + (error.error || 'Unknown error'))
+      } catch (parseError) {
+        console.error('❌ Failed to parse error response:', parseError)
+        console.error('Response text was:', responseText)
+        alert(`❌ Failed to update translation. Raw response: ` + responseText.substring(0, 200))
+      }
+    }
+  } catch (error) {
+    console.error('Error editing translation:', error)
+    alert('❌ Error: ' + error.message)
+  } finally {
+    loading.value = false
+  }
+}
+
 // Delete translation
 const deleteTranslation = async (extraction, languageCode) => {
   const languageName = availableLanguages.find(l => l.code === languageCode)?.name || languageCode
@@ -689,8 +769,18 @@ const handleClose = () => {
                 </span>
               </div>
 
-              <!-- Extracted Text -->
-              <div class="extraction-text">{{ extraction.extractedText }}</div>
+              <!-- Extracted Text with Inline Edit -->
+              <div class="extraction-text-container">
+                <div class="extraction-text">{{ extraction.extractedText }}</div>
+                <button
+                  @click="editExtraction(extraction)"
+                  class="btn-edit-inline"
+                  :disabled="loading"
+                  title="Edit extracted text"
+                >
+                  ✏️
+                </button>
+              </div>
 
               <!-- Coordinates Display Box - ENHANCED WITH INLINE EDITING -->
               <div v-if="extraction.locationData && extraction.locationData.fromCoord" class="coordinates-box">
@@ -839,22 +929,29 @@ const handleClose = () => {
                       <span class="translation-lang">{{ availableLanguages.find(l => l.code === lang)?.flag }} {{ availableLanguages.find(l => l.code === lang)?.name }}:</span>
                       <span class="translation-text">{{ text }}</span>
                     </div>
-                    <button
-                      @click.stop="deleteTranslation(extraction, lang)"
-                      class="btn-delete-translation"
-                      :disabled="loading"
-                      title="Delete this translation"
-                    >
-                      🗑️
-                    </button>
+                    <div class="translation-actions">
+                      <button
+                        @click.stop="editTranslation(extraction, lang, text)"
+                        class="btn-edit-inline"
+                        :disabled="loading"
+                        title="Edit translation"
+                      >
+                        ✏️
+                      </button>
+                      <button
+                        @click.stop="deleteTranslation(extraction, lang)"
+                        class="btn-delete-translation"
+                        :disabled="loading"
+                        title="Delete this translation"
+                      >
+                        🗑️
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
 
               <div class="extraction-actions">
-                <button @click="editExtraction(extraction)" class="btn-edit-small">
-                  ✏️ Edit Text
-                </button>
                 <button
                   @click="openTranslateDialog(extraction)"
                   class="btn-translate-small"
@@ -926,7 +1023,8 @@ const handleClose = () => {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.9);
+  background: rgba(5, 100, 177, 0.2);
+  backdrop-filter: blur(10px);
   z-index: 1000;
   display: flex;
   align-items: center;
@@ -935,14 +1033,15 @@ const handleClose = () => {
 }
 
 .image-editor-container {
-  background: #1a1a1a;
-  border-radius: 12px;
+  background: var(--white);
+  border-radius: 20px;
   width: 100%;
   max-width: 1400px;
   height: 90vh;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+  border: 3px solid var(--primary-blue);
 }
 
 .editor-header {
@@ -950,28 +1049,33 @@ const handleClose = () => {
   justify-content: space-between;
   align-items: center;
   padding: 1.5rem 2rem;
-  border-bottom: 2px solid #646cff;
+  border-bottom: 3px solid var(--soft-blue);
+  background: linear-gradient(135deg, var(--white) 0%, var(--soft-blue) 100%);
 }
 
 .editor-header h2 {
   margin: 0;
-  color: white;
+  color: var(--primary-blue);
+  font-family: 'Fredoka', 'Quicksand', cursive;
+  font-size: 1.8em;
 }
 
 .btn-close {
-  background: #ff6b6b;
+  background: var(--accent-red);
   color: white;
   border: none;
   padding: 0.75rem 1.5rem;
-  border-radius: 8px;
+  border-radius: 50px;
   cursor: pointer;
   font-weight: 600;
-  transition: all 0.2s;
+  transition: all 0.3s;
+  box-shadow: 0 2px 8px rgba(205, 19, 27, 0.3);
 }
 
 .btn-close:hover {
-  background: #ee5a52;
-  transform: scale(1.05);
+  background: #a00e16;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(205, 19, 27, 0.4);
 }
 
 .editor-content {
@@ -991,12 +1095,13 @@ const handleClose = () => {
 
 .image-wrapper {
   flex: 1;
-  background: rgba(0, 0, 0, 0.3);
-  border-radius: 8px;
+  background: var(--light-gray);
+  border-radius: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
+  border: 2px solid var(--soft-blue);
 }
 
 .image-wrapper img {
@@ -1012,20 +1117,23 @@ const handleClose = () => {
 
 .btn-extract {
   flex: 1;
-  background: #4ade80;
-  color: white;
+  background: var(--accent-light-green);
+  color: var(--accent-dark);
   border: none;
-  padding: 1rem;
-  border-radius: 8px;
+  padding: 1.2rem;
+  border-radius: 50px;
   cursor: pointer;
-  font-size: 1em;
-  font-weight: 600;
-  transition: all 0.2s;
+  font-size: 1.1em;
+  font-weight: 700;
+  transition: all 0.3s;
+  box-shadow: 0 3px 10px rgba(219, 242, 169, 0.4);
+  text-transform: uppercase;
 }
 
 .btn-extract:hover:not(:disabled) {
-  background: #3bc76a;
-  transform: translateY(-2px);
+  background: var(--accent-yellow);
+  transform: translateY(-3px);
+  box-shadow: 0 5px 15px rgba(249, 227, 22, 0.5);
 }
 
 .btn-extract:disabled {
@@ -1037,10 +1145,11 @@ const handleClose = () => {
   flex: 1;
   display: flex;
   flex-direction: column;
-  background: rgba(255, 255, 255, 0.03);
-  border-radius: 8px;
+  background: var(--soft-blue);
+  border-radius: 16px;
   padding: 1.5rem;
   overflow: hidden;
+  border: 2px solid var(--primary-blue);
 }
 
 .section-header {
@@ -1052,47 +1161,61 @@ const handleClose = () => {
 
 .section-header h3 {
   margin: 0;
-  color: #646cff;
+  color: var(--navy-blue);
+  font-weight: 700;
+  font-size: 1.3em;
 }
 
 .btn-add {
-  background: #646cff;
+  background: var(--primary-blue);
   color: white;
   border: none;
-  padding: 0.5rem 1rem;
-  border-radius: 6px;
+  padding: 0.6rem 1.2rem;
+  border-radius: 50px;
   cursor: pointer;
   font-weight: 600;
-  transition: all 0.2s;
+  transition: all 0.3s;
+  box-shadow: 0 2px 8px rgba(37, 150, 190, 0.3);
 }
 
 .btn-add:hover {
-  background: #535bf2;
+  background: var(--navy-blue);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(5, 100, 177, 0.4);
 }
 
 .add-form {
-  background: rgba(100, 108, 255, 0.1);
-  border: 1px solid #646cff;
-  border-radius: 8px;
-  padding: 1rem;
+  background: var(--white);
+  border: 2px solid var(--primary-blue);
+  border-radius: 16px;
+  padding: 1.5rem;
   margin-bottom: 1rem;
+  box-shadow: 0 4px 15px rgba(37, 150, 190, 0.15);
 }
 
 .add-form h4 {
   margin: 0 0 1rem 0;
-  color: white;
+  color: var(--navy-blue);
+  font-weight: 700;
 }
 
 .add-form textarea {
   width: 100%;
   padding: 0.75rem;
-  border-radius: 6px;
-  border: 1px solid #333;
-  background: rgba(0, 0, 0, 0.3);
-  color: white;
+  border-radius: 12px;
+  border: 2px solid var(--soft-blue);
+  background: var(--light-gray);
+  color: var(--accent-dark);
   font-family: inherit;
   margin-bottom: 1rem;
   resize: vertical;
+  font-size: 1em;
+}
+
+.add-form textarea:focus {
+  outline: none;
+  border-color: var(--primary-blue);
+  box-shadow: 0 0 0 3px rgba(37, 150, 190, 0.1);
 }
 
 .location-inputs {
@@ -1106,33 +1229,45 @@ const handleClose = () => {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  color: #ccc;
+  color: var(--navy-blue);
   font-size: 0.9em;
+  font-weight: 600;
 }
 
 .location-inputs input {
   flex: 1;
-  padding: 0.5rem;
-  border-radius: 4px;
-  border: 1px solid #333;
-  background: rgba(0, 0, 0, 0.3);
-  color: white;
+  padding: 0.6rem;
+  border-radius: 8px;
+  border: 2px solid var(--soft-blue);
+  background: var(--white);
+  color: var(--accent-dark);
+  font-weight: 500;
+}
+
+.location-inputs input:focus {
+  outline: none;
+  border-color: var(--primary-blue);
+  box-shadow: 0 0 0 3px rgba(37, 150, 190, 0.1);
 }
 
 .btn-save {
   width: 100%;
-  background: #4ade80;
-  color: white;
+  background: var(--accent-light-green);
+  color: var(--accent-dark);
   border: none;
-  padding: 0.75rem;
-  border-radius: 6px;
+  padding: 0.9rem;
+  border-radius: 50px;
   cursor: pointer;
-  font-weight: 600;
-  transition: all 0.2s;
+  font-weight: 700;
+  transition: all 0.3s;
+  box-shadow: 0 2px 8px rgba(219, 242, 169, 0.4);
+  text-transform: uppercase;
 }
 
 .btn-save:hover:not(:disabled) {
-  background: #3bc76a;
+  background: var(--accent-yellow);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(249, 227, 22, 0.5);
 }
 
 .btn-save:disabled {
@@ -1150,13 +1285,17 @@ const handleClose = () => {
   align-items: center;
   justify-content: center;
   padding: 2rem;
-  color: #888;
+  color: var(--navy-blue);
+  font-weight: 600;
 }
 
 .empty {
   text-align: center;
   padding: 2rem;
-  color: #888;
+  color: var(--navy-blue);
+  background: var(--white);
+  border-radius: 12px;
+  border: 2px dashed var(--primary-blue);
 }
 
 .empty p {
@@ -1164,11 +1303,19 @@ const handleClose = () => {
 }
 
 .extraction-item {
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 8px;
-  padding: 1rem;
-  margin-bottom: 0.75rem;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--white);
+  border-radius: 16px;
+  padding: 1.2rem;
+  margin-bottom: 1rem;
+  border: 2px solid var(--soft-blue);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  transition: all 0.3s;
+}
+
+.extraction-item:hover {
+  border-color: var(--primary-blue);
+  box-shadow: 0 4px 15px rgba(37, 150, 190, 0.15);
+  transform: translateY(-2px);
 }
 
 /* Extraction Header */
@@ -1176,60 +1323,94 @@ const handleClose = () => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.5rem 0.75rem;
-  background: linear-gradient(135deg, rgba(100, 108, 255, 0.2), rgba(74, 222, 128, 0.2));
-  border-radius: 6px;
+  padding: 0.6rem 1rem;
+  background: linear-gradient(135deg, var(--primary-blue), var(--navy-blue));
+  border-radius: 12px;
   margin-bottom: 0.75rem;
-  border: 1px solid rgba(100, 108, 255, 0.3);
 }
 
 .extraction-number {
-  color: #646cff;
+  color: white;
   font-weight: 700;
-  font-size: 1em;
-  text-shadow: 0 0 10px rgba(100, 108, 255, 0.5);
+  font-size: 1.1em;
 }
 
 .extraction-size {
-  color: #4ade80;
+  color: var(--accent-yellow);
   font-weight: 600;
   font-size: 0.85em;
   font-family: 'Courier New', monospace;
-  background: rgba(74, 222, 128, 0.2);
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.2);
+  padding: 0.3rem 0.6rem;
+  border-radius: 8px;
+}
+
+.extraction-text-container {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
 }
 
 .extraction-text {
-  color: white;
-  margin-bottom: 0.75rem;
-  font-size: 1.1em;
-  line-height: 1.5;
-  padding: 0.5rem;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 4px;
+  flex: 1;
+  color: var(--accent-dark);
+  font-size: 1.05em;
+  line-height: 1.6;
+  padding: 0.75rem;
+  background: var(--light-gray);
+  border-radius: 12px;
   font-weight: 500;
+}
+
+.btn-edit-inline {
+  background: var(--primary-blue);
+  color: white;
+  border: none;
+  padding: 0.6rem 0.8rem;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 1.1em;
+  transition: all 0.3s;
+  box-shadow: 0 2px 8px rgba(37, 150, 190, 0.3);
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-edit-inline:hover:not(:disabled) {
+  background: var(--navy-blue);
+  transform: translateY(-2px) scale(1.1);
+  box-shadow: 0 4px 12px rgba(5, 100, 177, 0.4);
+}
+
+.btn-edit-inline:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
 }
 
 /* Enhanced Coordinates Display Box */
 .coordinates-box {
-  background: linear-gradient(135deg, rgba(74, 222, 128, 0.15), rgba(74, 222, 128, 0.05));
-  border: 2px solid #4ade80;
-  border-radius: 8px;
+  background: var(--soft-blue);
+  border: 2px solid var(--primary-blue);
+  border-radius: 12px;
   padding: 1rem;
   margin-bottom: 0.75rem;
-  box-shadow: 0 0 20px rgba(74, 222, 128, 0.2);
+  box-shadow: 0 2px 10px rgba(37, 150, 190, 0.15);
 }
 
 .coordinates-header {
-  color: #4ade80;
+  color: var(--navy-blue);
   font-weight: 700;
   font-size: 1em;
   margin-bottom: 0.75rem;
   text-align: center;
   text-transform: uppercase;
   letter-spacing: 1px;
-  text-shadow: 0 0 10px rgba(74, 222, 128, 0.5);
 }
 
 .coordinates-grid {
@@ -1249,22 +1430,23 @@ const handleClose = () => {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  background: rgba(0, 0, 0, 0.3);
+  background: var(--white);
   padding: 0.75rem;
-  border-radius: 6px;
-  border: 1px solid rgba(74, 222, 128, 0.3);
-  transition: all 0.2s;
+  border-radius: 12px;
+  border: 2px solid var(--primary-blue);
+  transition: all 0.3s;
 }
 
 .coord-item-enhanced:hover {
-  background: rgba(0, 0, 0, 0.4);
-  border-color: #4ade80;
+  background: var(--soft-blue);
+  border-color: var(--navy-blue);
   transform: translateY(-2px);
+  box-shadow: 0 2px 8px rgba(37, 150, 190, 0.15);
 }
 
 .coord-icon {
   font-size: 1.8em;
-  filter: drop-shadow(0 0 5px rgba(74, 222, 128, 0.5));
+  filter: hue-rotate(180deg);
 }
 
 .coord-details {
@@ -1275,7 +1457,7 @@ const handleClose = () => {
 }
 
 .coord-label-small {
-  color: #4ade80;
+  color: var(--primary-blue);
   font-weight: 600;
   font-size: 0.75em;
   text-transform: uppercase;
@@ -1283,31 +1465,30 @@ const handleClose = () => {
 }
 
 .coord-value-large {
-  color: white;
+  color: var(--navy-blue);
   font-family: 'Courier New', monospace;
   font-size: 1em;
   font-weight: 700;
-  text-shadow: 0 0 5px rgba(255, 255, 255, 0.3);
 }
 
 .coord-dimensions {
-  background: rgba(74, 222, 128, 0.2);
+  background: var(--accent-light-green);
   padding: 0.75rem;
-  border-radius: 6px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  border: 1px solid rgba(74, 222, 128, 0.4);
+  border: 2px solid var(--accent-yellow);
 }
 
 .dimension-label {
-  color: #4ade80;
+  color: var(--accent-dark);
   font-weight: 700;
   font-size: 0.9em;
 }
 
 .dimension-value {
-  color: white;
+  color: var(--accent-dark);
   font-family: 'Courier New', monospace;
   font-size: 0.95em;
   font-weight: 600;
@@ -1315,19 +1496,23 @@ const handleClose = () => {
 
 .btn-edit-coordinates {
   width: 100%;
-  background: #4ade80;
+  background: var(--primary-blue);
   color: white;
   border: none;
-  padding: 0.5rem 1rem;
-  border-radius: 6px;
+  padding: 0.7rem 1rem;
+  border-radius: 50px;
   cursor: pointer;
-  font-size: 0.9em;
-  font-weight: 600;
-  transition: all 0.2s;
+  font-size: 0.95em;
+  font-weight: 700;
+  transition: all 0.3s;
+  box-shadow: 0 2px 8px rgba(37, 150, 190, 0.3);
+  text-transform: uppercase;
 }
 
 .btn-edit-coordinates:hover:not(:disabled) {
-  background: #3bc76a;
+  background: var(--navy-blue);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(5, 100, 177, 0.4);
 }
 
 .btn-edit-coordinates:disabled {
@@ -1348,9 +1533,9 @@ const handleClose = () => {
 }
 
 .coord-edit-group {
-  background: rgba(0, 0, 0, 0.3);
-  border: 2px solid rgba(74, 222, 128, 0.5);
-  border-radius: 8px;
+  background: var(--white);
+  border: 2px solid var(--primary-blue);
+  border-radius: 12px;
   padding: 0.75rem;
 }
 
@@ -1360,7 +1545,7 @@ const handleClose = () => {
   gap: 0.5rem;
   margin-bottom: 0.75rem;
   padding-bottom: 0.5rem;
-  border-bottom: 1px solid rgba(74, 222, 128, 0.3);
+  border-bottom: 2px solid var(--soft-blue);
 }
 
 .coord-inputs {
@@ -1373,23 +1558,23 @@ const handleClose = () => {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  color: white;
+  color: var(--navy-blue);
   font-weight: 600;
 }
 
 .coord-input-label span {
   min-width: 20px;
-  color: #4ade80;
+  color: var(--primary-blue);
   font-size: 0.9em;
 }
 
 .coord-input {
   flex: 1;
-  padding: 0.5rem 0.75rem;
-  background: rgba(0, 0, 0, 0.5);
-  border: 2px solid rgba(74, 222, 128, 0.3);
-  border-radius: 6px;
-  color: white;
+  padding: 0.6rem 0.75rem;
+  background: var(--light-gray);
+  border: 2px solid var(--soft-blue);
+  border-radius: 8px;
+  color: var(--accent-dark);
   font-family: 'Courier New', monospace;
   font-size: 1em;
   font-weight: 600;
@@ -1398,13 +1583,12 @@ const handleClose = () => {
 
 .coord-input:focus {
   outline: none;
-  border-color: #4ade80;
-  background: rgba(0, 0, 0, 0.7);
-  box-shadow: 0 0 10px rgba(74, 222, 128, 0.3);
+  border-color: var(--primary-blue);
+  box-shadow: 0 0 0 3px rgba(37, 150, 190, 0.1);
 }
 
 .coord-input:hover {
-  border-color: rgba(74, 222, 128, 0.6);
+  border-color: var(--primary-blue);
 }
 
 /* Remove spinner arrows from number inputs */
@@ -1560,7 +1744,8 @@ const handleClose = () => {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.8);
+  background: rgba(5, 100, 177, 0.2);
+  backdrop-filter: blur(10px);
   z-index: 2000;
   display: flex;
   align-items: center;
@@ -1568,45 +1753,58 @@ const handleClose = () => {
 }
 
 .translate-dialog {
-  background: #2a2a2a;
-  border-radius: 12px;
+  background: var(--white);
+  border: 3px solid var(--primary-blue);
+  border-radius: 20px;
   width: 90%;
   max-width: 500px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 12px 40px rgba(37, 150, 190, 0.3);
 }
 
 .dialog-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1.5rem;
-  border-bottom: 1px solid #444;
+  padding: 1.5rem 2rem;
+  background: linear-gradient(135deg, var(--white) 0%, var(--soft-blue) 100%);
+  border-bottom: 2px solid var(--soft-blue);
+  border-radius: 17px 17px 0 0;
 }
 
 .dialog-header h3 {
   margin: 0;
-  color: white;
-  font-size: 1.3em;
+  color: var(--primary-blue);
+  font-size: 1.4em;
+  font-family: 'Fredoka', 'Quicksand', cursive;
+  font-weight: 600;
 }
 
 .btn-close-dialog {
-  background: transparent;
+  background: var(--accent-red);
   border: none;
-  color: #999;
-  font-size: 1.5em;
+  color: white;
+  font-size: 1.2em;
   cursor: pointer;
   padding: 0;
-  width: 30px;
-  height: 30px;
-  transition: color 0.2s;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(205, 19, 27, 0.3);
 }
 
 .btn-close-dialog:hover {
-  color: #f44336;
+  background: #a00f1c;
+  transform: scale(1.1) rotate(90deg);
+  box-shadow: 0 4px 12px rgba(205, 19, 27, 0.5);
 }
 
 .dialog-content {
-  padding: 1.5rem;
+  padding: 2rem;
+  background: var(--white);
 }
 
 .original-text-display {
@@ -1615,27 +1813,27 @@ const handleClose = () => {
 
 .original-text-display label {
   display: block;
-  color: #aaa;
-  font-size: 0.9em;
+  color: var(--navy-blue);
+  font-size: 0.95em;
   margin-bottom: 0.5rem;
   font-weight: 600;
 }
 
 .text-preview {
-  background: rgba(100, 108, 255, 0.1);
-  border: 1px solid #646cff;
-  border-radius: 6px;
-  padding: 1rem;
-  color: white;
+  background: var(--soft-blue);
+  border: 2px solid var(--primary-blue);
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  color: var(--accent-dark);
   font-size: 1em;
-  line-height: 1.5;
+  line-height: 1.6;
   min-height: 60px;
 }
 
 .language-selector label {
   display: block;
-  color: #aaa;
-  font-size: 0.9em;
+  color: var(--navy-blue);
+  font-size: 0.95em;
   margin-bottom: 0.75rem;
   font-weight: 600;
 }
@@ -1643,29 +1841,32 @@ const handleClose = () => {
 .language-options {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 0.75rem;
+  gap: 0.9rem;
 }
 
 .language-option {
-  background: rgba(255, 255, 255, 0.05);
-  border: 2px solid transparent;
-  border-radius: 8px;
-  padding: 1rem;
+  background: var(--light-gray);
+  border: 2px solid var(--soft-blue);
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.3s ease;
   display: flex;
   align-items: center;
   gap: 0.75rem;
 }
 
 .language-option:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: #646cff;
+  background: var(--soft-blue);
+  border-color: var(--primary-blue);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(37, 150, 190, 0.2);
 }
 
 .language-option.selected {
-  background: rgba(100, 108, 255, 0.2);
-  border-color: #646cff;
+  background: linear-gradient(135deg, var(--primary-blue), var(--navy-blue));
+  border-color: var(--navy-blue);
+  box-shadow: 0 6px 20px rgba(37, 150, 190, 0.3);
 }
 
 .lang-flag {
@@ -1673,46 +1874,59 @@ const handleClose = () => {
 }
 
 .lang-name {
-  color: white;
+  color: var(--accent-dark);
   font-weight: 600;
   font-size: 0.95em;
+}
+
+.language-option.selected .lang-name {
+  color: white;
 }
 
 .dialog-footer {
   display: flex;
   justify-content: flex-end;
   gap: 1rem;
-  padding: 1.5rem;
-  border-top: 1px solid #444;
+  padding: 1.5rem 2rem;
+  background: var(--soft-blue);
+  border-top: 2px solid var(--primary-blue);
+  border-radius: 0 0 17px 17px;
 }
 
 .btn-cancel,
 .btn-confirm {
-  padding: 0.75rem 1.5rem;
-  border-radius: 8px;
+  padding: 0.8rem 1.75rem;
+  border-radius: 50px;
   border: none;
   font-size: 1em;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.3s ease;
 }
 
 .btn-cancel {
-  background: rgba(255, 255, 255, 0.1);
-  color: white;
+  background: var(--light-gray);
+  color: var(--navy-blue);
+  border: 2px solid var(--soft-blue);
 }
 
 .btn-cancel:hover {
-  background: rgba(255, 255, 255, 0.15);
+  background: var(--soft-blue);
+  border-color: var(--primary-blue);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(37, 150, 190, 0.15);
 }
 
 .btn-confirm {
-  background: #646cff;
+  background: var(--primary-blue);
   color: white;
+  box-shadow: 0 2px 8px rgba(37, 150, 190, 0.3);
 }
 
 .btn-confirm:hover:not(:disabled) {
-  background: #535bf2;
+  background: var(--navy-blue);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(5, 100, 177, 0.4);
 }
 
 .btn-confirm:disabled {
@@ -1738,10 +1952,11 @@ const handleClose = () => {
 }
 
 .translation-item {
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 4px;
-  padding: 0.5rem;
-  margin-bottom: 0.5rem;
+  background: var(--soft-blue);
+  border-radius: 12px;
+  padding: 0.75rem;
+  margin-bottom: 0.75rem;
+  border: 2px solid var(--primary-blue);
 }
 
 .translation-item:last-child {
@@ -1750,49 +1965,64 @@ const handleClose = () => {
 
 .translation-content {
   display: flex;
-  align-items: flex-start;
-  gap: 0.5rem;
+  align-items: center;
+  gap: 0.75rem;
   justify-content: space-between;
 }
 
 .translation-text-wrapper {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 0.35rem;
   flex: 1;
 }
 
 .translation-lang {
-  color: #f59e0b;
-  font-size: 0.8em;
-  font-weight: 600;
+  color: var(--navy-blue);
+  font-size: 0.85em;
+  font-weight: 700;
 }
 
 .translation-text {
-  color: white;
-  font-size: 0.95em;
-  line-height: 1.4;
+  color: var(--accent-dark);
+  font-size: 1em;
+  line-height: 1.5;
+  font-weight: 500;
 }
 
-.btn-delete-translation {
-  background: transparent;
-  border: 1px solid rgba(255, 107, 107, 0.3);
-  color: #ff6b6b;
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 1em;
-  transition: all 0.2s;
+.translation-actions {
+  display: flex;
+  gap: 0.5rem;
   flex-shrink: 0;
 }
 
+.btn-delete-translation {
+  background: var(--accent-red);
+  border: none;
+  color: white;
+  padding: 0.6rem 0.8rem;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 1.1em;
+  transition: all 0.3s;
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(205, 19, 27, 0.3);
+}
+
 .btn-delete-translation:hover:not(:disabled) {
-  background: rgba(255, 107, 107, 0.1);
-  border-color: #ff6b6b;
+  background: #a00e16;
+  transform: translateY(-2px) scale(1.1);
+  box-shadow: 0 4px 12px rgba(205, 19, 27, 0.4);
 }
 
 .btn-delete-translation:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+  transform: none;
 }
 </style>
