@@ -5,7 +5,7 @@ A Vue.js frontend application for TEP Konjac - Media Management & Translation Sy
 ## 🎯 Quick Links
 
 - **[📖 Complete User Journey Guide](USER_JOURNEY.md)** - Detailed step-by-step walkthrough (optional reference)
-- **[🎥 Video Demo on YouTube](https://youtu.be/eRIlBbxqaD0)** - Watch the system in action for the final 4b
+- **[🎥 Video Demo on YouTube](https://youtu.be/FwV8CLKuoq0)** - Watch the system in action for the final 4b
 
 ## 🚀 User Journey Example
 
