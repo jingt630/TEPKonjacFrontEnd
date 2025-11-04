@@ -915,16 +915,6 @@ const handleClose = () => {
                 </div>
               </div>
 
-              <div class="extraction-meta">
-                <div class="meta-row">
-                  <span class="meta-label">ID:</span>
-                  <span class="meta-value">{{ extraction._id }}</span>
-                </div>
-                <div class="meta-row" v-if="extraction.textId">
-                  <span class="meta-label">Text ID:</span>
-                  <span class="meta-value">{{ extraction.textId }}</span>
-                </div>
-              </div>
               <!-- Translations Section -->
               <div v-if="extraction.translations && Object.keys(extraction.translations).length > 0" class="translations-section">
                 <div class="translations-header">📝 Translations:</div>

@@ -249,8 +249,8 @@ const handleLogout = () => {
       </div>
 
       <footer class="app-footer">
-        <p><strong>Backend:</strong> http://localhost:8000/api</p>
-        <p><strong>Logged in as:</strong> {{ userStore.email }}</p>
+        <p>TEP Konjac - Image Translation Platform</p>
+        <p><strong>User:</strong> {{ userStore.username || userStore.email }}</p>
       </footer>
 
       <!-- Image Editor Modal -->

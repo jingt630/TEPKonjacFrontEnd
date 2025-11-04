@@ -57,19 +57,16 @@ const handleRenderImage = () => {
         <h3>File Information</h3>
         <dl>
           <dt>Type:</dt>
-          <dd>{{ mediaFile.mediaType }}</dd>
+          <dd>{{ mediaFile.mediaType?.toUpperCase() }}</dd>
 
-          <dt>Path:</dt>
-          <dd>{{ mediaFile.filePath }}</dd>
+          <dt>Filename:</dt>
+          <dd>{{ mediaFile.filename }}</dd>
 
           <dt>Uploaded:</dt>
           <dd>{{ new Date(mediaFile.uploadDate).toLocaleString() }}</dd>
 
           <dt>Last Updated:</dt>
           <dd>{{ new Date(mediaFile.updateDate).toLocaleString() }}</dd>
-
-          <dt>Cloud URL:</dt>
-          <dd>{{ mediaFile.cloudURL || 'N/A' }}</dd>
         </dl>
       </div>
     </div>
