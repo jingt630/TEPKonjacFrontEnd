@@ -1051,6 +1051,7 @@ const handleClose = () => {
   flex-direction: column;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
   border: 3px solid var(--primary-blue);
+  overflow: hidden;
 }
 
 .editor-header {
@@ -1060,6 +1061,7 @@ const handleClose = () => {
   padding: 1.5rem 2rem;
   border-bottom: 3px solid var(--soft-blue);
   background: linear-gradient(135deg, var(--white) 0%, var(--soft-blue) 100%);
+  border-radius: 17px 17px 0 0;
 }
 
 .editor-header h2 {
@@ -1289,6 +1291,26 @@ const handleClose = () => {
   overflow-y: auto;
 }
 
+/* Custom scrollbar styling for extractions list */
+.extractions-list::-webkit-scrollbar {
+  width: 10px;
+}
+
+.extractions-list::-webkit-scrollbar-track {
+  background: var(--light-gray);
+  border-radius: 5px;
+}
+
+.extractions-list::-webkit-scrollbar-thumb {
+  background: var(--primary-blue);
+  border-radius: 5px;
+  border: 2px solid var(--light-gray);
+}
+
+.extractions-list::-webkit-scrollbar-thumb:hover {
+  background: var(--navy-blue);
+}
+
 .loading {
   display: flex;
   align-items: center;
@@ -1313,9 +1335,9 @@ const handleClose = () => {
 
 .extraction-item {
   background: var(--white);
-  border-radius: 16px;
-  padding: 1.2rem;
-  margin-bottom: 1rem;
+  border-radius: 12px;
+  padding: 0.8rem;
+  margin-bottom: 0.75rem;
   border: 2px solid var(--soft-blue);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   transition: all 0.3s;
@@ -1332,43 +1354,43 @@ const handleClose = () => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.6rem 1rem;
+  padding: 0.4rem 0.75rem;
   background: linear-gradient(135deg, var(--primary-blue), var(--navy-blue));
-  border-radius: 12px;
-  margin-bottom: 0.75rem;
+  border-radius: 8px;
+  margin-bottom: 0.5rem;
 }
 
 .extraction-number {
   color: white;
   font-weight: 700;
-  font-size: 1.1em;
+  font-size: 0.9em;
 }
 
 .extraction-size {
   color: var(--accent-yellow);
   font-weight: 600;
-  font-size: 0.85em;
+  font-size: 0.75em;
   font-family: 'Courier New', monospace;
   background: rgba(255, 255, 255, 0.2);
-  padding: 0.3rem 0.6rem;
-  border-radius: 8px;
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
 }
 
 .extraction-text-container {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 0.75rem;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
 }
 
 .extraction-text {
   flex: 1;
   color: var(--accent-dark);
-  font-size: 1.05em;
-  line-height: 1.6;
-  padding: 0.75rem;
+  font-size: 0.9em;
+  line-height: 1.4;
+  padding: 0.5rem 0.75rem;
   background: var(--light-gray);
-  border-radius: 12px;
+  border-radius: 8px;
   font-weight: 500;
 }
 
@@ -1376,15 +1398,15 @@ const handleClose = () => {
   background: var(--primary-blue);
   color: white;
   border: none;
-  padding: 0.6rem 0.8rem;
+  padding: 0.4rem 0.6rem;
   border-radius: 50%;
   cursor: pointer;
-  font-size: 1.1em;
+  font-size: 0.9em;
   transition: all 0.3s;
   box-shadow: 0 2px 8px rgba(37, 150, 190, 0.3);
   flex-shrink: 0;
-  width: 40px;
-  height: 40px;
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1406,42 +1428,42 @@ const handleClose = () => {
 .coordinates-box {
   background: var(--soft-blue);
   border: 2px solid var(--primary-blue);
-  border-radius: 12px;
-  padding: 1rem;
-  margin-bottom: 0.75rem;
+  border-radius: 8px;
+  padding: 0.6rem;
+  margin-bottom: 0.5rem;
   box-shadow: 0 2px 10px rgba(37, 150, 190, 0.15);
 }
 
 .coordinates-header {
   color: var(--navy-blue);
   font-weight: 700;
-  font-size: 1em;
-  margin-bottom: 0.75rem;
+  font-size: 0.8em;
+  margin-bottom: 0.5rem;
   text-align: center;
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 0.5px;
 }
 
 .coordinates-grid {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
-  margin-bottom: 0.75rem;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
 }
 
 .coord-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 0.75rem;
+  gap: 0.5rem;
 }
 
 .coord-item-enhanced {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.5rem;
   background: var(--white);
-  padding: 0.75rem;
-  border-radius: 12px;
+  padding: 0.5rem;
+  border-radius: 8px;
   border: 2px solid var(--primary-blue);
   transition: all 0.3s;
 }
@@ -1454,52 +1476,52 @@ const handleClose = () => {
 }
 
 .coord-icon {
-  font-size: 1.8em;
+  font-size: 1.3em;
   filter: hue-rotate(180deg);
 }
 
 .coord-details {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 0.15rem;
   flex: 1;
 }
 
 .coord-label-small {
   color: var(--primary-blue);
   font-weight: 600;
-  font-size: 0.75em;
+  font-size: 0.65em;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.3px;
 }
 
 .coord-value-large {
   color: var(--navy-blue);
   font-family: 'Courier New', monospace;
-  font-size: 1em;
+  font-size: 0.8em;
   font-weight: 700;
 }
 
 .coord-dimensions {
   background: var(--accent-light-green);
-  padding: 0.75rem;
-  border-radius: 12px;
+  padding: 0.5rem;
+  border-radius: 8px;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.4rem;
   border: 2px solid var(--accent-yellow);
 }
 
 .dimension-label {
   color: var(--accent-dark);
   font-weight: 700;
-  font-size: 0.9em;
+  font-size: 0.75em;
 }
 
 .dimension-value {
   color: var(--accent-dark);
   font-family: 'Courier New', monospace;
-  font-size: 0.95em;
+  font-size: 0.75em;
   font-weight: 600;
 }
 
@@ -1508,10 +1530,10 @@ const handleClose = () => {
   background: var(--primary-blue);
   color: white;
   border: none;
-  padding: 0.7rem 1rem;
-  border-radius: 50px;
+  padding: 0.5rem 0.75rem;
+  border-radius: 20px;
   cursor: pointer;
-  font-size: 0.95em;
+  font-size: 0.8em;
   font-weight: 700;
   transition: all 0.3s;
   box-shadow: 0 2px 8px rgba(37, 150, 190, 0.3);
@@ -1684,7 +1706,7 @@ const handleClose = () => {
 
 .extraction-actions {
   display: flex;
-  gap: 0.5rem;
+  gap: 0.4rem;
   flex-wrap: wrap;
 }
 
@@ -1692,12 +1714,12 @@ const handleClose = () => {
 .btn-translate-small,
 .btn-delete-small {
   flex: 1;
-  min-width: 100px;
-  padding: 0.5rem;
-  border-radius: 6px;
+  min-width: 80px;
+  padding: 0.4rem 0.6rem;
+  border-radius: 20px;
   border: none;
   cursor: pointer;
-  font-size: 0.85em;
+  font-size: 0.75em;
   font-weight: 600;
   transition: all 0.2s;
 }
@@ -1740,6 +1762,8 @@ const handleClose = () => {
   text-align: center;
   color: #888;
   font-size: 0.9em;
+  border-radius: 0 0 17px 17px;
+  background: var(--light-gray);
 }
 
 .editor-footer p {
@@ -1948,23 +1972,23 @@ const handleClose = () => {
   background: rgba(245, 158, 11, 0.1);
   border-left: 3px solid #f59e0b;
   border-radius: 6px;
-  padding: 0.75rem;
-  margin-top: 0.75rem;
-  margin-bottom: 0.75rem;
+  padding: 0.5rem;
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
 }
 
 .translations-header {
   color: #f59e0b;
   font-weight: 600;
-  font-size: 0.85em;
-  margin-bottom: 0.5rem;
+  font-size: 0.75em;
+  margin-bottom: 0.4rem;
 }
 
 .translation-item {
   background: var(--soft-blue);
-  border-radius: 12px;
-  padding: 0.75rem;
-  margin-bottom: 0.75rem;
+  border-radius: 8px;
+  padding: 0.5rem;
+  margin-bottom: 0.5rem;
   border: 2px solid var(--primary-blue);
 }
 
@@ -1975,33 +1999,33 @@ const handleClose = () => {
 .translation-content {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.5rem;
   justify-content: space-between;
 }
 
 .translation-text-wrapper {
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: 0.25rem;
   flex: 1;
 }
 
 .translation-lang {
   color: var(--navy-blue);
-  font-size: 0.85em;
+  font-size: 0.75em;
   font-weight: 700;
 }
 
 .translation-text {
   color: var(--accent-dark);
-  font-size: 1em;
-  line-height: 1.5;
+  font-size: 0.85em;
+  line-height: 1.3;
   font-weight: 500;
 }
 
 .translation-actions {
   display: flex;
-  gap: 0.5rem;
+  gap: 0.4rem;
   flex-shrink: 0;
 }
 
@@ -2009,14 +2033,14 @@ const handleClose = () => {
   background: var(--accent-red);
   border: none;
   color: white;
-  padding: 0.6rem 0.8rem;
+  padding: 0.4rem 0.6rem;
   border-radius: 50%;
   cursor: pointer;
-  font-size: 1.1em;
+  font-size: 0.9em;
   transition: all 0.3s;
   flex-shrink: 0;
-  width: 40px;
-  height: 40px;
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;

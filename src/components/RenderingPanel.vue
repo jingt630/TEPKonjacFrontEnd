@@ -692,11 +692,8 @@ onMounted(() => {
             </button>
           </div>
         </div>
-      </div>
 
-      <!-- RIGHT SIDE: Preview & Render -->
-      <div class="right-panel">
-        <!-- Render Action -->
+        <!-- Render Action - Moved to Bottom of Left Panel -->
         <div class="render-section">
           <h3>3️⃣ Render Output</h3>
           <button
@@ -707,9 +704,13 @@ onMounted(() => {
             {{ loading ? '🔄 Rendering...' : '🎨 Render Selected Text' }}
           </button>
           <p class="render-info">
-            This will create a new output version with {{ selectedElements.length }} text element(s) overlaid on the image.
+            Will render {{ selectedElements.length }} text element(s) on the image.
           </p>
         </div>
+      </div>
+
+      <!-- RIGHT SIDE: Image Preview Only -->
+      <div class="right-panel">
 
         <!-- Output Versions -->
         <div class="outputs-section">
@@ -871,9 +872,31 @@ onMounted(() => {
 <style scoped>
 .rendering-panel {
   padding: 2rem;
-  height: 100%;
+  flex: 1;
   overflow-y: auto;
   background: var(--light-gray);
+  min-height: 0;
+  border-radius: 0 0 18px 18px;
+}
+
+/* Custom scrollbar styling for rendering panel */
+.rendering-panel::-webkit-scrollbar {
+  width: 12px;
+}
+
+.rendering-panel::-webkit-scrollbar-track {
+  background: var(--soft-blue);
+  border-radius: 0 0 18px 0;
+}
+
+.rendering-panel::-webkit-scrollbar-thumb {
+  background: var(--primary-blue);
+  border-radius: 6px;
+  border: 2px solid var(--soft-blue);
+}
+
+.rendering-panel::-webkit-scrollbar-thumb:hover {
+  background: var(--navy-blue);
 }
 
 .panel-header {
@@ -905,9 +928,8 @@ onMounted(() => {
 }
 
 .left-panel {
-  flex: 1;
-  min-width: 400px;
-  max-width: 50%;
+  flex: 0 0 380px;
+  min-width: 380px;
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
@@ -915,8 +937,7 @@ onMounted(() => {
 
 .right-panel {
   flex: 1;
-  min-width: 400px;
-  max-width: 50%;
+  min-width: 500px;
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
@@ -926,36 +947,36 @@ onMounted(() => {
 
 /* Language Selector */
 .language-selector {
-  margin-bottom: 2rem;
-  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  padding: 1rem;
   background: var(--white);
-  border-radius: 16px;
+  border-radius: 12px;
   border: 2px solid var(--soft-blue);
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
 }
 
 .language-selector h3 {
-  margin: 0 0 1.5rem 0;
+  margin: 0 0 0.75rem 0;
   color: var(--navy-blue);
   font-weight: 700;
-  font-size: 1.3em;
+  font-size: 1.1em;
 }
 
 .language-options {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 1rem;
-  margin-bottom: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 0.6rem;
+  margin-bottom: 0.75rem;
 }
 
 .language-option {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 1rem 1.25rem;
+  gap: 0.5rem;
+  padding: 0.6rem 0.75rem;
   background: var(--light-gray);
   border: 2px solid var(--soft-blue);
-  border-radius: 12px;
+  border-radius: 10px;
   cursor: pointer;
   transition: all 0.3s;
 }
@@ -974,11 +995,12 @@ onMounted(() => {
 }
 
 .lang-flag {
-  font-size: 1.8em;
+  font-size: 1.3em;
 }
 
 .lang-name {
   font-weight: 700;
+  font-size: 0.85em;
   color: var(--accent-dark);
 }
 
@@ -987,9 +1009,9 @@ onMounted(() => {
 }
 
 .language-info {
-  padding: 0.75rem;
+  padding: 0.5rem;
   text-align: center;
-  font-size: 0.95em;
+  font-size: 0.85em;
   color: var(--navy-blue);
   font-weight: 600;
 }
@@ -1001,27 +1023,27 @@ onMounted(() => {
 
 /* Elements Section */
 .elements-section {
-  margin-bottom: 2rem;
-  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  padding: 1rem;
   background: var(--white);
-  border-radius: 16px;
+  border-radius: 12px;
   border: 2px solid var(--soft-blue);
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
 }
 
 .elements-section h3 {
-  margin: 0 0 1rem 0;
+  margin: 0 0 0.75rem 0;
   color: var(--navy-blue);
   font-weight: 700;
-  font-size: 1.3em;
+  font-size: 1.1em;
 }
 
 .elements-list {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
-  margin-bottom: 1rem;
-  max-height: 600px;
+  gap: 0.6rem;
+  margin-bottom: 0.75rem;
+  max-height: 500px;
   overflow-y: auto;
   overflow-x: hidden;
   padding-right: 0.5rem;
@@ -1048,11 +1070,11 @@ onMounted(() => {
 
 .element-item {
   display: flex;
-  gap: 1rem;
-  padding: 1.25rem;
+  gap: 0.6rem;
+  padding: 0.75rem;
   background: var(--light-gray);
   border: 2px solid var(--soft-blue);
-  border-radius: 16px;
+  border-radius: 10px;
   cursor: pointer;
   transition: all 0.3s;
 }
@@ -1084,8 +1106,8 @@ onMounted(() => {
 }
 
 .element-checkbox input {
-  width: 22px;
-  height: 22px;
+  width: 18px;
+  height: 18px;
   cursor: pointer;
   accent-color: var(--primary-blue);
 }
@@ -1094,19 +1116,19 @@ onMounted(() => {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.3rem;
 }
 
 .element-number {
   font-weight: 700;
   color: var(--primary-blue);
-  font-size: 1em;
+  font-size: 0.85em;
 }
 
 .element-text {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.3rem;
 }
 
 .original {
@@ -1114,7 +1136,8 @@ onMounted(() => {
   font-weight: 600;
   word-wrap: break-word;
   overflow-wrap: break-word;
-  line-height: 1.5;
+  line-height: 1.3;
+  font-size: 0.85em;
 }
 
 .translated {
@@ -1122,12 +1145,13 @@ onMounted(() => {
   font-style: italic;
   word-wrap: break-word;
   overflow-wrap: break-word;
-  line-height: 1.5;
+  line-height: 1.3;
   font-weight: 500;
+  font-size: 0.8em;
 }
 
 .element-position {
-  font-size: 0.9em;
+  font-size: 0.75em;
   color: var(--primary-blue);
   font-family: 'Courier New', monospace;
   font-weight: 600;
@@ -1303,16 +1327,18 @@ onMounted(() => {
 
 /* Render Section */
 .render-section {
-  margin-bottom: 2rem;
+  margin-top: auto;
   padding: 1rem;
-  background: rgba(245, 158, 11, 0.1);
-  border-radius: 8px;
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(249, 227, 22, 0.15));
+  border: 2px solid #f59e0b;
+  border-radius: 12px;
   text-align: center;
 }
 
 .render-section h3 {
-  margin: 0 0 1rem 0;
+  margin: 0 0 0.75rem 0;
   color: #f59e0b;
+  font-size: 1em;
 }
 
 .btn-render {
@@ -1342,9 +1368,9 @@ onMounted(() => {
 }
 
 .render-info {
-  margin: 1rem 0 0 0;
+  margin: 0.5rem 0 0 0;
   color: #888;
-  font-size: 0.9em;
+  font-size: 0.8em;
 }
 
 /* Outputs Section */
@@ -1451,11 +1477,41 @@ onMounted(() => {
 .output-preview-container {
   position: relative;
   margin: 0.75rem 0;
+  overflow-x: auto;
+  overflow-y: auto;
+  max-width: 100%;
+  border-radius: 12px;
+  border: 2px solid var(--primary-blue);
+}
+
+/* Custom scrollbar for preview container */
+.output-preview-container::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+.output-preview-container::-webkit-scrollbar-track {
+  background: var(--soft-blue);
+}
+
+.output-preview-container::-webkit-scrollbar-thumb {
+  background: var(--primary-blue);
+  border-radius: 6px;
+  border: 2px solid var(--soft-blue);
+}
+
+.output-preview-container::-webkit-scrollbar-thumb:hover {
+  background: var(--navy-blue);
+}
+
+.output-preview-container::-webkit-scrollbar-corner {
+  background: var(--soft-blue);
 }
 
 .preview-with-rulers {
   display: flex;
   position: relative;
+  min-width: min-content;
 }
 
 /* Ruler Styles */

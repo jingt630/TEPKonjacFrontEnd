@@ -515,9 +515,11 @@ button:disabled {
   width: 100%;
   max-width: 95vw;
   max-height: 90vh;
-  overflow-y: auto;
+  overflow: hidden;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
   border: 2px solid var(--primary-blue);
+  display: flex;
+  flex-direction: column;
 }
 
 .modal-header {
@@ -527,6 +529,7 @@ button:disabled {
   padding: 1.5rem 2rem;
   border-bottom: 2px solid var(--soft-blue);
   background: var(--white);
+  border-radius: 18px 18px 0 0;
 }
 
 .modal-header h2 {

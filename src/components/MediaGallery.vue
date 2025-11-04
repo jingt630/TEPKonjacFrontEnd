@@ -114,14 +114,22 @@ h2 {
 }
 
 .btn-upload-toggle {
-  background: var(--primary-blue);
-  color: white;
+  background: linear-gradient(135deg, var(--accent-light-green), var(--accent-yellow));
+  color: var(--accent-dark);
   border: none;
+  padding: 1rem 2.5rem !important;
+  font-size: 1.3em !important;
+  font-weight: 700 !important;
+  border-radius: 50px !important;
+  box-shadow: 0 4px 20px rgba(219, 242, 169, 0.5) !important;
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }
 
 .btn-upload-toggle:hover {
-  background: var(--navy-blue);
-  transform: translateY(-2px);
+  background: linear-gradient(135deg, var(--accent-yellow), var(--accent-light-green));
+  transform: translateY(-4px) scale(1.05);
+  box-shadow: 0 6px 30px rgba(249, 227, 22, 0.6) !important;
 }
 
 .upload-section {
