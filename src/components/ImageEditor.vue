@@ -21,6 +21,11 @@ const extractions = ref([])
 const selectedExtraction = ref(null)
 const showAddExtraction = ref(false)
 
+// Multi-select state
+const selectedExtractions = ref([]) // For bulk operations on extractions
+const selectedTranslations = ref({}) // { extractionId: [lang1, lang2, ...] }
+const showBulkActions = ref(false)
+
 // Coordinate editing state
 const editingCoordinates = ref({}) // Track which extraction is being edited
 
@@ -469,6 +474,144 @@ const isEditingCoordinates = (extractionId) => {
   return !!editingCoordinates.value[extractionId]
 }
 
+// Multi-select functions for extractions
+const toggleExtractionSelection = (extractionId) => {
+  const index = selectedExtractions.value.indexOf(extractionId)
+  if (index > -1) {
+    selectedExtractions.value.splice(index, 1)
+  } else {
+    selectedExtractions.value.push(extractionId)
+  }
+}
+
+const selectAllExtractions = () => {
+  selectedExtractions.value = extractions.value.map(e => e._id)
+}
+
+const deselectAllExtractions = () => {
+  selectedExtractions.value = []
+}
+
+const isExtractionSelected = (extractionId) => {
+  return selectedExtractions.value.includes(extractionId)
+}
+
+// Multi-select functions for translations
+const toggleTranslationSelection = (extractionId, languageCode) => {
+  if (!selectedTranslations.value[extractionId]) {
+    selectedTranslations.value[extractionId] = []
+  }
+
+  const langs = selectedTranslations.value[extractionId]
+  const index = langs.indexOf(languageCode)
+
+  if (index > -1) {
+    langs.splice(index, 1)
+  } else {
+    langs.push(languageCode)
+  }
+}
+
+const isTranslationSelected = (extractionId, languageCode) => {
+  return selectedTranslations.value[extractionId]?.includes(languageCode) || false
+}
+
+// Bulk delete extractions
+const bulkDeleteExtractions = async () => {
+  if (selectedExtractions.value.length === 0) {
+    alert('⚠️ No extractions selected')
+    return
+  }
+
+  if (!confirm(`Delete ${selectedExtractions.value.length} selected extraction(s)?`)) return
+
+  loading.value = true
+  let successCount = 0
+
+  try {
+    for (const extractionId of selectedExtractions.value) {
+      const extraction = extractions.value.find(e => e._id === extractionId)
+      if (!extraction) continue
+
+      const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.DELETE_EXTRACTION}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: userStore.userId,
+          extractionId: extractionId
+        }),
+      })
+
+      if (response.ok) {
+        successCount++
+      }
+    }
+
+    alert(`✅ Deleted ${successCount}/${selectedExtractions.value.length} extraction(s)`)
+    selectedExtractions.value = []
+    await loadExtractions()
+  } catch (error) {
+    console.error('Error bulk deleting extractions:', error)
+    alert('❌ Error: ' + error.message)
+  } finally {
+    loading.value = false
+  }
+}
+
+// Bulk delete translations
+const bulkDeleteTranslations = async () => {
+  const totalSelected = Object.values(selectedTranslations.value)
+    .reduce((sum, langs) => sum + langs.length, 0)
+
+  if (totalSelected === 0) {
+    alert('⚠️ No translations selected')
+    return
+  }
+
+  if (!confirm(`Delete ${totalSelected} selected translation(s)?`)) return
+
+  loading.value = true
+  let successCount = 0
+
+  try {
+    for (const [extractionId, languageCodes] of Object.entries(selectedTranslations.value)) {
+      const extraction = extractions.value.find(e => e._id === extractionId)
+      if (!extraction) continue
+
+      for (const lang of languageCodes) {
+        const translationId = extraction.translationIds?.[lang]
+        if (!translationId) continue
+
+        const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.DELETE_TRANSLATION}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            userId: userStore.userId,
+            translationId: translationId
+          }),
+        })
+
+        if (response.ok) {
+          successCount++
+        }
+      }
+    }
+
+    alert(`✅ Deleted ${successCount}/${totalSelected} translation(s)`)
+    selectedTranslations.value = {}
+    await loadExtractions()
+  } catch (error) {
+    console.error('Error bulk deleting translations:', error)
+    alert('❌ Error: ' + error.message)
+  } finally {
+    loading.value = false
+  }
+}
+
 // Delete extraction
 const deleteExtraction = async (extraction) => {
   if (!confirm(`Delete extraction: "${extraction.extractedText}"?`)) return
@@ -720,9 +863,42 @@ const handleClose = () => {
         <div class="extractions-section">
           <div class="section-header">
             <h3>📄 Text Extractions ({{ extractions.length }})</h3>
-            <button @click="showAddExtraction = !showAddExtraction" class="btn-add">
-              {{ showAddExtraction ? '✖ Cancel' : '➕ Add Manual' }}
-            </button>
+            <div class="header-actions">
+              <button @click="showBulkActions = !showBulkActions" class="btn-bulk-toggle">
+                {{ showBulkActions ? '✖ Cancel' : '☑️ Select' }}
+              </button>
+              <button @click="showAddExtraction = !showAddExtraction" class="btn-add">
+                {{ showAddExtraction ? '✖ Cancel' : '➕ Add Manual' }}
+              </button>
+            </div>
+          </div>
+
+          <!-- Bulk Actions Bar -->
+          <div v-if="showBulkActions" class="bulk-actions-bar">
+            <div class="bulk-actions-group">
+              <button @click="selectAllExtractions" class="btn-select-action">
+                ☑️ Select All
+              </button>
+              <button @click="deselectAllExtractions" class="btn-select-action">
+                ☐ Deselect All
+              </button>
+            </div>
+            <div class="bulk-actions-group">
+              <button
+                @click="bulkDeleteExtractions"
+                :disabled="selectedExtractions.length === 0"
+                class="btn-bulk-delete"
+              >
+                🗑️ Delete Selected ({{ selectedExtractions.length }})
+              </button>
+              <button
+                @click="bulkDeleteTranslations"
+                :disabled="Object.values(selectedTranslations).reduce((sum, langs) => sum + langs.length, 0) === 0"
+                class="btn-bulk-delete-trans"
+              >
+                🗑️ Delete Translations ({{ Object.values(selectedTranslations).reduce((sum, langs) => sum + langs.length, 0) }})
+              </button>
+            </div>
           </div>
 
           <!-- Add Extraction Form -->
@@ -769,6 +945,16 @@ const handleClose = () => {
               :key="extraction._id"
               class="extraction-item"
             >
+              <!-- Multi-select Checkbox (shown in bulk mode) -->
+              <div v-if="showBulkActions" class="extraction-checkbox-container">
+                <input
+                  type="checkbox"
+                  :checked="isExtractionSelected(extraction._id)"
+                  @change="toggleExtractionSelection(extraction._id)"
+                  class="extraction-checkbox"
+                />
+              </div>
+
               <!-- Extraction Header with Number -->
               <div class="extraction-header">
                 <span class="extraction-number">📝 Text Box #{{ index + 1 }}</span>
@@ -924,11 +1110,19 @@ const handleClose = () => {
                   class="translation-item"
                 >
                   <div class="translation-content">
+                    <input
+                      v-if="showBulkActions"
+                      type="checkbox"
+                      :checked="isTranslationSelected(extraction._id, lang)"
+                      @change="toggleTranslationSelection(extraction._id, lang)"
+                      @click.stop
+                      class="translation-checkbox"
+                    />
                     <div class="translation-text-wrapper">
                       <span class="translation-lang">{{ availableLanguages.find(l => l.code === lang)?.flag }} {{ availableLanguages.find(l => l.code === lang)?.name }}:</span>
                       <span class="translation-text">{{ text }}</span>
                     </div>
-                    <div class="translation-actions">
+                    <div v-if="!showBulkActions" class="translation-actions">
                       <button
                         @click.stop="editTranslation(extraction, lang, text)"
                         class="btn-edit-inline"
@@ -950,7 +1144,7 @@ const handleClose = () => {
                 </div>
               </div>
 
-              <div class="extraction-actions">
+              <div v-if="!showBulkActions" class="extraction-actions">
                 <button
                   @click="openTranslateDialog(extraction)"
                   class="btn-translate-small"
@@ -1167,6 +1361,29 @@ const handleClose = () => {
   font-size: 1.3em;
 }
 
+.header-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.btn-bulk-toggle {
+  background: var(--accent-yellow);
+  color: var(--accent-dark);
+  border: none;
+  padding: 0.6rem 1.2rem;
+  border-radius: 50px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s;
+  box-shadow: 0 2px 8px rgba(249, 227, 22, 0.3);
+}
+
+.btn-bulk-toggle:hover {
+  background: var(--accent-light-green);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(219, 242, 169, 0.4);
+}
+
 .btn-add {
   background: var(--primary-blue);
   color: white;
@@ -1183,6 +1400,93 @@ const handleClose = () => {
   background: var(--navy-blue);
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(5, 100, 177, 0.4);
+}
+
+/* Bulk Actions Bar */
+.bulk-actions-bar {
+  background: linear-gradient(135deg, var(--accent-light-green), var(--accent-yellow));
+  border: 2px solid var(--accent-dark);
+  border-radius: 12px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  box-shadow: 0 4px 15px rgba(249, 227, 22, 0.3);
+}
+
+.bulk-actions-group {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.btn-select-action {
+  flex: 1;
+  background: var(--white);
+  color: var(--navy-blue);
+  border: 2px solid var(--primary-blue);
+  padding: 0.6rem 1rem;
+  border-radius: 50px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.9em;
+  transition: all 0.3s;
+}
+
+.btn-select-action:hover {
+  background: var(--soft-blue);
+  border-color: var(--navy-blue);
+  transform: translateY(-2px);
+}
+
+.btn-bulk-delete {
+  flex: 1;
+  background: var(--accent-red);
+  color: white;
+  border: none;
+  padding: 0.6rem 1rem;
+  border-radius: 50px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.9em;
+  transition: all 0.3s;
+  box-shadow: 0 2px 8px rgba(205, 19, 27, 0.3);
+}
+
+.btn-bulk-delete:hover:not(:disabled) {
+  background: #a00e16;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(205, 19, 27, 0.4);
+}
+
+.btn-bulk-delete:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-bulk-delete-trans {
+  flex: 1;
+  background: var(--accent-pink);
+  color: var(--accent-dark);
+  border: none;
+  padding: 0.6rem 1rem;
+  border-radius: 50px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.9em;
+  transition: all 0.3s;
+  box-shadow: 0 2px 8px rgba(250, 198, 206, 0.3);
+}
+
+.btn-bulk-delete-trans:hover:not(:disabled) {
+  background: #f09ba5;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(250, 198, 206, 0.5);
+}
+
+.btn-bulk-delete-trans:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .add-form {
@@ -1331,12 +1635,69 @@ const handleClose = () => {
   border: 2px solid var(--soft-blue);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   transition: all 0.3s;
+  position: relative;
 }
 
 .extraction-item:hover {
   border-color: var(--primary-blue);
   box-shadow: 0 4px 15px rgba(37, 150, 190, 0.15);
   transform: translateY(-2px);
+}
+
+/* Extraction Checkbox */
+.extraction-checkbox-container {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  z-index: 10;
+  background: linear-gradient(135deg, var(--accent-yellow), var(--accent-light-green));
+  border-radius: 50%;
+  padding: 0.3rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  animation: popIn 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55), pulse 2s ease-in-out 0.4s 2;
+  border: 2px solid var(--accent-dark);
+}
+
+@keyframes popIn {
+  0% {
+    transform: scale(0) rotate(-180deg);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.3) rotate(10deg);
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  }
+  50% {
+    transform: scale(1.15);
+    box-shadow: 0 4px 20px rgba(249, 227, 22, 0.6);
+  }
+}
+
+.extraction-checkbox {
+  width: 22px;
+  height: 22px;
+  cursor: pointer;
+  accent-color: var(--primary-blue);
+}
+
+.translation-checkbox {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+  accent-color: var(--accent-pink);
+  margin-right: 0.5rem;
+  flex-shrink: 0;
+  animation: popIn 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55), pulse 2s ease-in-out 0.4s 1;
 }
 
 /* Extraction Header */
