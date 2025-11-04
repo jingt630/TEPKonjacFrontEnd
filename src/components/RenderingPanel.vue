@@ -928,16 +928,16 @@ onMounted(() => {
 }
 
 .left-panel {
-  flex: 0 0 380px;
-  min-width: 380px;
+  flex: 4;
+  min-width: 350px;
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
 }
 
 .right-panel {
-  flex: 1;
-  min-width: 500px;
+  flex: 6;
+  min-width: 400px;
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
@@ -1045,13 +1045,14 @@ onMounted(() => {
   margin-bottom: 0.75rem;
   max-height: 500px;
   overflow-y: auto;
-  overflow-x: hidden;
+  overflow-x: auto;
   padding-right: 0.5rem;
 }
 
-/* Vertical scrollbar styling */
+/* Scrollbar styling (both vertical and horizontal) */
 .elements-list::-webkit-scrollbar {
   width: 10px;
+  height: 10px;
 }
 
 .elements-list::-webkit-scrollbar-track {
@@ -1066,6 +1067,10 @@ onMounted(() => {
 
 .elements-list::-webkit-scrollbar-thumb:hover {
   background: var(--navy-blue);
+}
+
+.elements-list::-webkit-scrollbar-corner {
+  background: var(--light-gray);
 }
 
 .element-item {
