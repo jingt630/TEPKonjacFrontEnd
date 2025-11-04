@@ -215,9 +215,11 @@ const drawImageAndText = async () => {
       }
     });
 
-    // Generate data URL
+    // Generate data URL at maximum quality
+    // Using PNG for lossless quality (no quality parameter needed)
     renderedImageUrl.value = canvas.toDataURL('image/png');
     console.log('✅ Canvas rendering complete!');
+    console.log(`📊 Final canvas size: ${canvas.width}×${canvas.height}px (full resolution)`);
 
   } catch (err) {
     console.error('❌ Canvas rendering error:', err);
@@ -252,14 +254,18 @@ defineExpose({
       return;
     }
 
+    const canvas = canvasRef.value;
     console.log('💾 Downloading rendered image...');
+    console.log(`   Canvas resolution: ${canvas.width}×${canvas.height}px (full quality)`);
+    console.log(`   File format: PNG (lossless)`);
+
     const link = document.createElement('a');
     link.download = `rendered_${Date.now()}.png`;
     link.href = renderedImageUrl.value;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    console.log('✅ Download initiated');
+    console.log('✅ Download initiated at full resolution!');
   },
   getRenderedImageUrl: () => renderedImageUrl.value
 });
@@ -291,9 +297,11 @@ defineExpose({
 
 canvas {
   max-width: 100%;
+  max-height: 100%;
   height: auto;
   display: block;
   border: 2px solid #4ade80;
+  object-fit: contain;
 }
 
 canvas.hidden {

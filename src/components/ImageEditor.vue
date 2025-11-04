@@ -10,7 +10,7 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['close'])
+const emit = defineEmits(['close', 'coordinatesChanged'])
 
 const userStore = useUserStore()
 
@@ -447,6 +447,10 @@ const saveCoordinates = async (extraction) => {
       console.log('✅ Coordinates saved successfully')
       delete editingCoordinates.value[extraction._id]
       await loadExtractions()
+
+      // Emit event to trigger auto-render if rendering panel is open
+      emit('coordinatesChanged', props.mediaFile._id)
+
       alert('✅ Coordinates updated!')
     } else {
       const error = await response.json()
@@ -501,22 +505,27 @@ const editTranslation = async (extraction, languageCode, currentText) => {
   const newText = prompt(`Edit ${languageName} translation:`, currentText)
   if (!newText || newText === currentText) return
 
+  // Get the translation ID for this language
+  if (!extraction.translationIds || !extraction.translationIds[languageCode]) {
+    alert('❌ Translation ID not found')
+    return
+  }
+
   loading.value = true
   try {
     console.log(`✏️ Updating ${languageName} translation from "${currentText}" to "${newText}"`)
 
-    // Re-create the translation with new text
-    const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.CREATE_TRANSLATION}`, {
+    const translationId = extraction.translationIds[languageCode]
+
+    // Use EDIT endpoint to save user's manual correction (no AI)
+    const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.EDIT_TRANSLATION}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        userId: userStore.userId,
-        imagePath: props.mediaFile._id,
-        originalTextId: extraction.textId,
-        originalText: extraction.extractedText,
-        targetLanguage: languageCode
+        translation: translationId,
+        newText: newText
       }),
     })
 

@@ -232,30 +232,55 @@ h3 {
 
 .upload-actions {
   display: flex;
-  gap: 0.75rem;
+  gap: 1rem;
 }
 
-.upload-actions button {
+/* Override global button styles with higher specificity */
+.upload-actions button.btn-upload,
+.upload-actions button.btn-cancel {
   flex: 1;
-  padding: 0.85rem;
-  font-size: 1em;
+  padding: 1.2rem 2rem !important;
+  font-size: 1.1em !important;
+  font-weight: 600 !important;
+  border: none !important;
+  border-radius: 50px !important;
+  cursor: pointer;
+  transition: all 0.3s ease !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
 }
 
 .btn-upload {
-  background: var(--accent-light-green);
-  color: var(--accent-dark);
+  background: var(--accent-light-green) !important;
+  color: var(--accent-dark) !important;
 }
 
 .btn-upload:hover:not(:disabled) {
-  background: var(--accent-yellow);
-  color: var(--accent-dark);
+  background: var(--accent-yellow) !important;
+  color: var(--accent-dark) !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+}
+
+.btn-upload:disabled {
+  opacity: 0.6 !important;
+  cursor: not-allowed !important;
+  transform: none !important;
 }
 
 .btn-cancel {
-  background: var(--accent-red);
+  background: var(--accent-red) !important;
+  color: white !important;
 }
 
 .btn-cancel:hover:not(:disabled) {
-  background: #a00e16;
+  background: #a00e16 !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+}
+
+.btn-cancel:disabled {
+  opacity: 0.6 !important;
+  cursor: not-allowed !important;
+  transform: none !important;
 }
 </style>

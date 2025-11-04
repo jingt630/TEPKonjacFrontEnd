@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted, defineProps } from 'vue'
+import { ref, computed, onMounted, defineProps, defineExpose } from 'vue'
 import { API_BASE_URL, API_ENDPOINTS } from '../config/api'
 import { useUserStore } from '../stores/userStore'
 import { renderingApi } from '../services/renderingApi'
@@ -435,6 +435,10 @@ const saveEditedLocation = async (extraction) => {
 
       alert('✅ Location updated successfully!')
       cancelEditingLocation()
+
+      // Auto-render since user is already in rendering panel
+      console.log('🔄 Auto-rendering after location change in rendering panel...')
+      await renderOutput()
     } else {
       const errorText = await response.text()
       console.error('❌ Failed to update location:', response.status, errorText)
@@ -497,6 +501,22 @@ const loadImageDimensions = () => {
     img.src = baseImageUrl.value
   }
 }
+
+// Trigger auto-render (called from parent when coordinates change)
+const triggerAutoRender = async () => {
+  console.log('🔄 Auto-render triggered by coordinate change')
+
+  // Reload extractions first to get updated coordinates
+  await loadExtractions()
+
+  // Then trigger render
+  await renderOutput()
+}
+
+// Expose methods to parent component
+defineExpose({
+  triggerAutoRender
+})
 
 // Initialize
 onMounted(() => {
@@ -771,8 +791,8 @@ onMounted(() => {
                       :ref="(el) => setCanvasRendererRef(output._id, el)"
                       :baseImageUrl="baseImageUrl"
                       :textElements="output.renderedData.textElements"
-                      :width="displayDimensions.width"
-                      :height="displayDimensions.height"
+                      :width="imageDimensions.width"
+                      :height="imageDimensions.height"
                     />
                     <div v-else class="preview-loading">Loading base image...</div>
 

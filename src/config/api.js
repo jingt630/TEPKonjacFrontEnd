@@ -3,6 +3,11 @@
 export const API_BASE_URL = 'http://localhost:8000/api';
 
 export const API_ENDPOINTS = {
+  // ========== Authentication ==========
+  LOGIN: '/auth/login',
+  LOGOUT: '/auth/logout',
+
+
   // ========== MediaManagement Concept ==========
   UPLOAD_MEDIA: '/MediaManagement/upload',
   DELETE_MEDIA: '/MediaManagement/delete',

@@ -139,6 +139,7 @@ const closeImageEditor = () => {
 // Handle render image from MediaDetails component
 const showRenderingPanel = ref(false)
 const imageToRender = ref(null)
+const renderingPanelRef = ref(null)
 
 const handleRenderImage = (mediaFile) => {
   console.log('🎨 Opening rendering panel for:', mediaFile.filename)
@@ -149,6 +150,23 @@ const handleRenderImage = (mediaFile) => {
 const closeRenderingPanel = () => {
   showRenderingPanel.value = false
   imageToRender.value = null
+}
+
+// Handle coordinates changed from ImageEditor
+const handleCoordinatesChanged = (mediaId) => {
+  console.log('📍 Coordinates changed for media:', mediaId)
+
+  // If rendering panel is open for the same image, trigger auto-render
+  if (showRenderingPanel.value && imageToRender.value?._id === mediaId) {
+    console.log('🔄 Auto-rendering because RenderingPanel is open for this image...')
+
+    // Wait a bit for extractions to reload, then trigger render
+    setTimeout(() => {
+      if (renderingPanelRef.value && renderingPanelRef.value.triggerAutoRender) {
+        renderingPanelRef.value.triggerAutoRender()
+      }
+    }, 500)
+  }
 }
 
 // Handle file upload from MediaGallery component
@@ -240,6 +258,7 @@ const handleLogout = () => {
         v-if="showImageEditor && imageToEdit"
         :media-file="imageToEdit"
         @close="closeImageEditor"
+        @coordinates-changed="handleCoordinatesChanged"
       />
 
       <!-- Rendering Panel Modal -->
@@ -249,7 +268,7 @@ const handleLogout = () => {
             <h2>🎨 Render Text on Image</h2>
             <button @click="closeRenderingPanel" class="btn-close-modal">✖ Close</button>
           </div>
-          <RenderingPanel :media-file="imageToRender" />
+          <RenderingPanel ref="renderingPanelRef" :media-file="imageToRender" />
         </div>
       </div>
     </template>
